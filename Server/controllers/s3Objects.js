@@ -176,11 +176,10 @@ function getFilesForSubfolder(subfolderKey, objects) {
     if (item.Key.startsWith(subfolderKey)) {
       const relativePath = item.Key.slice(subfolderKey.length);
 
-      if (relativePath.endsWith("/"))
+      if (relativePath.endsWith("/") && relativePath.slice(0, -1).indexOf('/') === -1)
         subfolders.push({ Key: relativePath.slice(0, -1), Type: "folder" });
 
-      // if (relativePath.indexOf('/') === -1 && relativePath !== "") subFiles.push( { ...item, Key: relativePath }); //is a file
-      if (relativePath.indexOf("/") === -1 && relativePath !== "")
+     if (relativePath.indexOf("/") === -1 && relativePath !== "")
         subFiles.push(item); //is a file
     }
   });
