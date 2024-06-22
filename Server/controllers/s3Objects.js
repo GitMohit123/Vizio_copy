@@ -3,11 +3,88 @@ import {
   HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3config.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const prefix = "users/";
+
+export const deleteVideo = async (req, res, next) => {
+  const { url } = req.body;
+
+  const decodeUrl = decodeURIComponent(url);
+
+  const parts = decodeUrl.split("/");
+
+  const bucketName = parts[2].split(".")[0];
+
+  const key = parts.slice(3).join("/").split("?")[0];
+
+  const params = {
+    Bucket: bucketName,
+    Key: key,
+  };
+
+  console.log("bucket", bucketName, key);
+  try {
+    const command = new DeleteObjectCommand(params);
+    await s3Client.send(command);
+    return res.status(200).send({ message: "Video deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ error: "Failed to delete video" });
+  }
+};
+
+export const deleteVideoFolder = async (req, res, next) => {
+  const { folderPath, teamPath } = req.body;
+  const { userId } = req.query;
+
+  console.log("fodlerpath", folderPath, userId, teamPath);
+
+  const decodefolderpath = decodeURIComponent(folderPath);
+
+  try {
+    const params = {
+      Bucket: "vidzspace",
+      Prefix: prefix + `${userId}/${teamPath}/${decodefolderpath}`,
+    };
+
+    const listCommand = new ListObjectsV2Command(params);
+    const data = await s3Client.send(listCommand);
+
+    if (!data.Contents || data.Contents.length === 0) {
+      return res
+        .status(404)
+        .send({ message: "Folder not found or already empty" });
+    }
+
+    const keysToDelete = data.Contents.map((obj) => obj.Key);
+
+    const objects = keysToDelete.map((Key) => ({ Key }));
+
+    const delparams = {
+      Bucket: "vidzspace",
+      Delete: {
+        Objects: objects,
+        Quiet: true,
+      },
+    };
+    const commanddel = new DeleteObjectsCommand(delparams);
+
+    await s3Client.send(commanddel);
+
+    return res
+      .status(200)
+      .send({ message: "Video folder deleted successfully" });
+  } catch (error) {
+    console.log(error);
+  }
+
+  console.log("bucket", decodefolderpath, userId, teamPath);
+};
 
 export const listTeams = async (req, res, next) => {
   const { user_id } = req.query;
@@ -167,7 +244,10 @@ async function calculateFolderSizes(folders, bucketName, prefix) {
 
   for (const folder of folders) {
     if (folder.Type === "folder") {
-      const folderSize = await getFolderSize(bucketName, prefix + folder.Key + "/");
+      const folderSize = await getFolderSize(
+        bucketName,
+        prefix + folder.Key + "/"
+      );
       folderSizes.push({ Key: folder.Key, size: folderSize });
     }
   }
@@ -300,13 +380,20 @@ export const listRoot = async (req, res, next) => {
           };
         })
     );
-    const folderSizes = await calculateFolderSizes(folders, "vidzspace", prefix + path);
+    const folderSizes = await calculateFolderSizes(
+      folders,
+      "vidzspace",
+      prefix + path
+    );
     // Combine folders and files into a single array
     const result = {
-      folders: folders.map((folder) => ({ ...folder, size: folderSizes.find((f) => f.Key === folder.Key)?.size || 0 })), // Add size to each folder object
+      folders: folders.map((folder) => ({
+        ...folder,
+        size: folderSizes.find((f) => f.Key === folder.Key)?.size || 0,
+      })), // Add size to each folder object
       files: files,
       // sharingDetails: sharingDetails,
-      size:size
+      size: size,
     };
 
     return res.json(result);

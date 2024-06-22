@@ -2,7 +2,11 @@ import React, { useState } from "react";
 import HomeContext from "./HomeContext";
 import { useDispatch, useSelector } from "react-redux";
 import { addTeamState, setCurrentTeam } from "../../app/Actions/teamActions";
-import { setPath, setPathEmpty, setTeamPath } from "../../app/Actions/cmsAction";
+import {
+  setPath,
+  setPathEmpty,
+  setTeamPath,
+} from "../../app/Actions/cmsAction";
 
 const HomeState = ({ children }) => {
   // user state
@@ -47,6 +51,8 @@ const HomeState = ({ children }) => {
   };
 
   const [isOpenVisibility, setIsOpenVisibility] = useState(false);
+  const [videoPreview, setVideoPreview] = useState("");
+  const [previewPopup, setPreviewPopup] = useState(false);
   const [isUploadDropdownOpen, setIsUploadDropdownOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [selectedFolders, setSelectedFolders] = useState([]);
@@ -86,6 +92,10 @@ const HomeState = ({ children }) => {
         files,
         folders,
         path,
+        videoPreview,
+        setVideoPreview,
+        setPreviewPopup,
+        previewPopup,
       }}
     >
       {children}

@@ -1,9 +1,17 @@
 import { Router } from "express";
-import { listTeams,createTeam, listRoot } from "../controllers/s3Objects.js";
+import {
+  listTeams,
+  createTeam,
+  listRoot,
+  deleteVideo,
+  deleteVideoFolder,
+} from "../controllers/s3Objects.js";
 
 const s3router = Router();
-s3router.get("/listTeams",listTeams);
-s3router.post("/createTeam",createTeam);
-s3router.get("/fetchTeamsData",listRoot);
+s3router.get("/listTeams", listTeams);
+s3router.post("/createTeam", createTeam);
+s3router.get("/fetchTeamsData", listRoot);
+s3router.delete("/delete", deleteVideo);
+s3router.post("/deletefolder", deleteVideoFolder);
 
-export default s3router
+export default s3router;

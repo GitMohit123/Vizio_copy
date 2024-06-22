@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Route, Routes, useNavigate } from "react-router-dom";
 import { HomePage, LandingPage, Login, SignUp } from "./pages";
 import FirebaseState from "./context/firebase/FirebaseState";
@@ -34,7 +34,7 @@ const App = () => {
     return (
       <div className="min-h-screen h-aut w-screen items-center justify-center bg-black">
         <motion.div className="fixed text-white inset-0 backdrop-blur-md flex items-center justify-center w-full">
-          <MainLoader/>
+          <MainLoader />
         </motion.div>
       </div>
     );
@@ -43,12 +43,12 @@ const App = () => {
     <>
       <FirebaseState>
         <HomeState>
-        <Routes>
-          <Route path="/*" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/home" element={<HomePage/>}/>
-        </Routes>
+          <Routes>
+            <Route path="/*" element={<LandingPage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/home" element={<HomePage />} />
+          </Routes>
         </HomeState>
       </FirebaseState>
     </>

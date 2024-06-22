@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Add this in your CSS file or inside a <style> tag in your component */
+.blur-content {
+  filter: blur(8px); /* Adjust the blur intensity as needed */
+  pointer-events: none; /* Optional: Disable interactions with blurred content */
+}
