@@ -50,14 +50,54 @@ export const deleteVideo = async (url, idToken) => {
     throw error;
   }
 };
-export const deleteVideoFolder = async (folderPath, userId, teamPath) => {
+export const deleteVideoFolder = async (folderKey, userId, teamPath, path) => {
   try {
-    console.log(userId, teamPath, folderPath);
+    console.log(userId, teamPath, folderKey);
     const { data } = await axios.post(
       `/vidzspaceApi/users/s3/deletefolder`,
       {
-        folderPath,
+        folderKey,
         teamPath,
+        path,
+      },
+
+      {
+        params: {
+          userId,
+        },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log(data);
+
+    return data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
+export const fileFolderRename = async (
+  type,
+  path,
+  newName,
+  teamPath,
+  userId,
+  filefoldername
+) => {
+  try {
+    console.log(type, path, newName, teamPath, userId, filefoldername);
+    const { data } = await axios.post(
+      `/vidzspaceApi/users/s3/rename`,
+      {
+        type,
+        path,
+        newName,
+        teamPath,
+        filefoldername,
       },
 
       {

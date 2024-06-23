@@ -5,9 +5,13 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   DeleteObjectsCommand,
+  CopyObjectCommand,
+  GetObjectTaggingCommand,
+  PutObjectTaggingCommand,
 } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3config.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { params } from "firebase-functions";
 
 const prefix = "users/";
 
@@ -21,6 +25,8 @@ export const deleteVideo = async (req, res, next) => {
   const bucketName = parts[2].split(".")[0];
 
   const key = parts.slice(3).join("/").split("?")[0];
+
+  console.log(key);
 
   const params = {
     Bucket: bucketName,
@@ -39,32 +45,30 @@ export const deleteVideo = async (req, res, next) => {
 };
 
 export const deleteVideoFolder = async (req, res, next) => {
-  const { folderPath, teamPath } = req.body;
+  const { folderKey, teamPath, path } = req.body;
   const { userId } = req.query;
 
-  console.log("fodlerpath", folderPath, userId, teamPath);
+  console.log("fodlerpath", folderKey, userId, teamPath, path);
 
-  const decodefolderpath = decodeURIComponent(folderPath);
+  // const decodefolderpath = decodeURIComponent();
 
   try {
+    const folderPref = path
+      ? `${userId}/${teamPath}/${path}/${folderKey}`
+      : `${userId}/${teamPath}/${folderKey}`;
     const params = {
       Bucket: "vidzspace",
-      Prefix: prefix + `${userId}/${teamPath}/${decodefolderpath}`,
+      Prefix: prefix + folderPref,
     };
-
     const listCommand = new ListObjectsV2Command(params);
     const data = await s3Client.send(listCommand);
-
     if (!data.Contents || data.Contents.length === 0) {
       return res
         .status(404)
         .send({ message: "Folder not found or already empty" });
     }
-
     const keysToDelete = data.Contents.map((obj) => obj.Key);
-
     const objects = keysToDelete.map((Key) => ({ Key }));
-
     const delparams = {
       Bucket: "vidzspace",
       Delete: {
@@ -73,17 +77,117 @@ export const deleteVideoFolder = async (req, res, next) => {
       },
     };
     const commanddel = new DeleteObjectsCommand(delparams);
-
     await s3Client.send(commanddel);
-
     return res
       .status(200)
       .send({ message: "Video folder deleted successfully" });
   } catch (error) {
     console.log(error);
   }
+};
 
-  console.log("bucket", decodefolderpath, userId, teamPath);
+export const renameFolderFile = async (req, res, next) => {
+  console.log(req);
+  const { type, newName, teamPath, path, filefoldername } = req.body;
+  const { userId } = req.query;
+
+  console.log("type", type, newName, path, userId, teamPath, filefoldername);
+
+  let folprefix;
+  if (!path) {
+    folprefix = prefix + `${userId}/${teamPath}/`;
+  } else {
+    folprefix = prefix + `${userId}/${teamPath}/${path}/`;
+  }
+
+  console.log(folprefix);
+
+  try {
+    if (type === "file") {
+      const copyParams = {
+        Bucket: "vidzspace",
+        CopySource: `/vidzspace/${folprefix}${filefoldername}`,
+        Key: `${folprefix}${newName}.mp4`,
+      };
+
+      console.log("Key", copyParams?.CopySource, copyParams?.Key);
+
+      let tags = [];
+      try {
+        const taggingCommand = new GetObjectTaggingCommand({
+          Bucket: "vidzspace",
+          Key: `${folprefix}${filefoldername}`,
+        });
+        const taggingData = await s3Client.send(taggingCommand);
+        tags = taggingData.TagSet;
+      } catch (error) {
+        if (error.name !== "NoSuchTagSet") {
+          throw error;
+        }
+      }
+
+      const copyCommand = new CopyObjectCommand(copyParams);
+      await s3Client.send(copyCommand);
+
+      if (tags.length > 0) {
+        const taggingCommand = new PutObjectTaggingCommand({
+          Bucket: "vidzspace",
+          Key: `${folprefix}${newName}`,
+          Tagging: {
+            TagSet: tags,
+          },
+        });
+        await s3Client.send(taggingCommand);
+      }
+
+      const deleteParams = {
+        Bucket: "vidzspace",
+        Key: `${folprefix}${filefoldername}`,
+      };
+
+      const deleteCommand = new DeleteObjectCommand(deleteParams);
+      await s3Client.send(deleteCommand);
+
+      res.status(200).json({
+        message: "File renamed and original object deleted successfully",
+      });
+    } else if (type === "folder") {
+      const listParams = {
+        Bucket: "vidzspace",
+        Prefix: `${folprefix}${filefoldername}/`,
+      };
+
+      const listCommand = new ListObjectsV2Command(listParams);
+      const listedObjects = await s3Client.send(listCommand);
+
+      for (const object of listedObjects.Contents) {
+        const copyParams = {
+          Bucket: "vidzspace",
+          CopySource: `/${listParams.Bucket}/${object.Key}`,
+          Key: object.Key.replace(
+            `${folprefix}${filefoldername}/`,
+            `${folprefix}${newName}/`
+          ),
+        };
+
+        const copyCommand = new CopyObjectCommand(copyParams);
+        await s3Client.send(copyCommand);
+
+        const deleteParams = {
+          Bucket: "vidzspace",
+          Key: object.Key,
+        };
+
+        const deleteCommand = new DeleteObjectCommand(deleteParams);
+        await s3Client.send(deleteCommand);
+      }
+      res.status(200).json({
+        message: "File/Folder renamed and original object deleted successfully",
+      });
+    }
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 export const listTeams = async (req, res, next) => {
@@ -176,7 +280,10 @@ function getFilesForSubfolder(subfolderKey, objects) {
     if (item.Key.startsWith(subfolderKey)) {
       const relativePath = item.Key.slice(subfolderKey.length);
 
-      if (relativePath.endsWith("/"))
+      if (
+        relativePath.endsWith("/") &&
+        relativePath.slice(0, -1).indexOf("/") === -1
+      )
         subfolders.push({ Key: relativePath.slice(0, -1), Type: "folder" });
 
       // if (relativePath.indexOf('/') === -1 && relativePath !== "") subFiles.push( { ...item, Key: relativePath }); //is a file

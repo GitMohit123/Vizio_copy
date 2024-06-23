@@ -18,7 +18,11 @@ import { FaPlus } from "react-icons/fa";
 import TeamAdd from "../../components/PopUp/TeamAdd";
 import { MdOutlineKeyboardArrowDown } from "react-icons/md";
 import { FaSearch } from "react-icons/fa";
-import { setCMSData, setProjectState, setTeamPath } from "../../app/Actions/cmsAction";
+import {
+  setCMSData,
+  setProjectState,
+  setTeamPath,
+} from "../../app/Actions/cmsAction";
 import TeamProjects from "./TeamProjects";
 import TeamInfo from "./TeamInfo";
 import UpgradePlan from "./UpgradePlan";
@@ -42,10 +46,13 @@ const Homepage = () => {
     projectState,
     isTeamDropDownOpen,
     setIsTeamDropDownOpen,
-    path
+    path,
+    deleteLoader,
+    setDeleteLoader,
+    loader,
   } = useContext(HomeContext);
 
-  const {handleSignOut} = useContext(FirebaseContext)
+  const { handleSignOut } = useContext(FirebaseContext);
   // console.log(path)
 
   useEffect(() => {
@@ -54,21 +61,24 @@ const Homepage = () => {
     }
   }, [team]);
 
-  useEffect(()=>{
-    const currentTeamPath = currentTeam
-    const fetchData = async()=>{
-      try{
+  useEffect(() => {
+    const currentTeamPath = currentTeam;
+    const fetchData = async () => {
+      try {
         const userId = user?.uid;
-        const response = await fetchTeamsData(`${userId}/${currentTeamPath}/${path}`,userId);
+        const response = await fetchTeamsData(
+          `${userId}/${currentTeamPath}/${path}`,
+          userId
+        );
         const filesData = response?.files;
         const folderData = response?.folders;
-        dispatch(setCMSData(filesData,folderData));
-      }catch(err){
-        console.log("Unable to fetch data")
+        dispatch(setCMSData(filesData, folderData));
+      } catch (err) {
+        console.log("Unable to fetch data");
       }
-    }
-    fetchData()
-  },[currentTeam,user,path])
+    };
+    fetchData();
+  }, [currentTeam, user, path, loader]);
 
   useEffect(() => {
     const fetchTeams = async () => {

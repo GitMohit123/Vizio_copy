@@ -6,9 +6,10 @@ import { TbCloudUpload } from "react-icons/tb";
 import { motion } from "framer-motion";
 import { useDispatch } from "react-redux";
 import PreviewLoader from "../../components/PreviewLoader";
-
+import { useEffect } from "react";
 import {
   routePath,
+  setLoader,
   setPath,
   setPathEmpty,
   setProjectState,
@@ -20,8 +21,19 @@ import "../../styles/CSS/Scrollbar/projectScrollbar.css";
 import VideoPreview from "../../components/VideoPreview";
 import { useNavigate } from "react-router-dom";
 import { deleteVideo, deleteVideoFolder } from "../../api/s3Objects";
+import FolderRename from "../../components/PopUp/FolderRename";
 const TeamProjects = () => {
-  const { teamPath, files, folders, path } = useContext(HomeContext);
+  const {
+    teamPath,
+    files,
+    folders,
+    path,
+    deleteLoader,
+    setDeleteLoader,
+    loader,
+  } = useContext(HomeContext);
+
+  console.log("path", path);
   const display = path.split("/");
   const dispatch = useDispatch();
   const extractName = (filename) => {
@@ -29,7 +41,7 @@ const TeamProjects = () => {
     return match ? match[1] : filename;
   };
 
-  console.log(teamPath);
+  //console.log(teamPath);
   const convertBytesToGB = (bytes) => {
     const gigabyte = 1024 * 1024 * 1024; // One gigabyte in bytes
     const convertedValue = bytes / gigabyte;
@@ -84,8 +96,14 @@ const TeamProjects = () => {
 
   const [selectedItem, setSelectedItem] = useState({});
 
+  const { itemToRename, setItemToRename } = useContext(HomeContext);
+
   const handleThreeDotsClick = (type, index, path) => {
     setSelectedItem({ type, index, path });
+  };
+
+  const handleRename = (type, index, path, name) => {
+    setItemToRename({ type, index, path, name });
   };
 
   const closeSidebar = () => {
@@ -102,28 +120,49 @@ const TeamProjects = () => {
   };
 
   const handleDelete = (url) => {
+    dispatch(setLoader(true));
+    console.log(loader);
     deleteVideo(url)
       .then((data) => {
         console.log(data);
+        setTimeout(() => {
+          dispatch(setLoader(false));
+        }, 1000);
       })
       .catch((error) => {
         console.log(error);
       });
+
+    //dispatch(setLoader(false));
   };
 
+  useEffect(() => {
+    console.log("Loader state changed:", loader);
+  }, [loader]);
   const { user } = useContext(HomeContext);
 
-  const handleDeleteFolder = (folderPath) => {
+  const handleDeleteFolder = (folderKey) => {
+    //setDeleteLoader(true);
+    dispatch(setLoader(true));
     const userId = user?.uid;
-    console.log(userId);
-    deleteVideoFolder(folderPath, userId, teamPath)
+    console.log(userId, folderKey);
+    deleteVideoFolder(folderKey, userId, teamPath, path)
       .then((data) => {
         console.log(data);
+        setTimeout(() => {
+          dispatch(setLoader(false));
+        }, 1000);
       })
       .catch((error) => {
         console.log(error);
       });
   };
+
+  const { renamePopup, setRenamePopup } = useContext(HomeContext);
+
+  //console.log(selectedItem);
+
+  console.log(itemToRename);
 
   return (
     <>
@@ -165,7 +204,19 @@ const TeamProjects = () => {
         </>
       )}
 
-      <div className={`transition ${loading ? "blur-content" : ""}`}>
+      {loader && (
+        <>
+          <PreviewLoader />
+        </>
+      )}
+
+      {renamePopup && (
+        <>
+          <FolderRename />
+        </>
+      )}
+
+      <div className={`transition ${loading || loader ? "blur-content" : ""}`}>
         {files.length === 0 && folders.length === 0 && !path ? (
           <div className="h-full w-full flex justify-center items-center">
             <motion.div
@@ -250,7 +301,7 @@ const TeamProjects = () => {
                             setSelectedItem({
                               type: "folder",
                               index: `folder-${index}`,
-                              path: folder?.Key,
+                              path: path,
                             })
                           }
                           className="font-black text-3xl cursor-pointer"
@@ -260,7 +311,7 @@ const TeamProjects = () => {
                   </div>
                   {selectedItem?.type === "folder" &&
                     selectedItem?.index === `folder-${index}` &&
-                    selectedItem?.path === folder?.Key && (
+                    selectedItem?.path === path && (
                       <div className="absolute right-[-35px] top-[170px] h-50 bg-gray-900 px-2 py-4 z-10 rounded-xl">
                         <div className="absolute top-2 right-2 cursor-pointer">
                           <IoIosClose size={20} onClick={closeSidebar} />
@@ -278,8 +329,20 @@ const TeamProjects = () => {
                           <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
                             Copy
                           </p>
-                          <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
-                            Move
+                          <p
+                            className="text-white hover:bg-slate-800 py-1 rounded-xl px-1"
+                            onClick={() => {
+                              closeSidebar();
+                              setRenamePopup(true);
+                              setItemToRename({
+                                type: "folder",
+                                index: `folder-${index}`,
+                                path: path,
+                                name: folder?.Key,
+                              });
+                            }}
+                          >
+                            rename
                           </p>
                           <p
                             className="text-white hover:bg-slate-800 py-1 rounded-xl px-1"
@@ -336,7 +399,7 @@ const TeamProjects = () => {
                             setSelectedItem({
                               type: "file",
                               index: `file-${index}`,
-                              path: file.Key,
+                              path: path,
                             })
                           }
                           className="font-black text-3xl cursor-pointer"
@@ -347,7 +410,7 @@ const TeamProjects = () => {
 
                   {selectedItem?.type === "file" &&
                     selectedItem?.index === `file-${index}` &&
-                    selectedItem?.path === file.Key && (
+                    selectedItem?.path === path && (
                       <div className="absolute right-[-40px] top-[170px] h-50 bg-gray-900 px-2 py-4 z-10 rounded-xl">
                         <div className="absolute top-2 right-2 cursor-pointer">
                           <IoIosClose size={20} onClick={closeSidebar} />
@@ -365,8 +428,20 @@ const TeamProjects = () => {
                           <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
                             Copy
                           </p>
-                          <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
-                            Move
+                          <p
+                            className="text-white hover:bg-slate-800 py-1 rounded-xl px-1"
+                            onClick={() => {
+                              closeSidebar();
+                              setRenamePopup(true);
+                              setItemToRename({
+                                type: "file",
+                                index: `file-${index}`,
+                                path: path,
+                                name: file?.Key,
+                              });
+                            }}
+                          >
+                            rename
                           </p>
                           <p
                             className="text-white hover:bg-slate-800 py-1 rounded-xl px-1"

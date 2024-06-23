@@ -5,6 +5,7 @@ const initialState = {
   projectState: false,
   files: [],
   folders: [],
+  deleteLoader: false,
 };
 
 const cmsReducer = (state = initialState, action) => {
@@ -40,6 +41,11 @@ const cmsReducer = (state = initialState, action) => {
       return {
         ...state,
         path: action.path,
+      };
+    case "SET_LOADER":
+      return {
+        ...state,
+        deleteLoader: action.loader,
       };
     default:
       return state;
