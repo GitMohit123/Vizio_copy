@@ -6,14 +6,33 @@ import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
   CopyObjectCommand,
+<<<<<<< Updated upstream
   GetObjectTaggingCommand,
   PutObjectTaggingCommand,
 } from "@aws-sdk/client-s3";
 import { s3Client } from "../s3config.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { params } from "firebase-functions";
+=======
+} from "@aws-sdk/client-s3";
+import { s3Client } from "../s3config.js";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import admin from "../index.js";
+>>>>>>> Stashed changes
 
 const prefix = "users/";
+
+function getOwnerIdFromObjectKey(Key) {
+  const parts = Key.split('/');
+  const prefixLength = prefix.split('/').length;
+  // Ensure there are at least 2 parts (users, username)
+  if (parts.length > prefixLength) {
+      // console.log(parts)
+      return parts[prefixLength];
+  } else {
+      return null;
+  }
+}
 
 export const deleteVideo = async (req, res, next) => {
   const { url } = req.body;
@@ -506,5 +525,92 @@ export const listRoot = async (req, res, next) => {
     return res.json(result);
   } catch (err) {
     return err;
+  }
+};
+
+export const copyVideo = async (req, res) => { //destPath = path after users/
+  console.log("hi");
+  const { srcKey, destPath } = req.body;
+
+  try {
+    const owner_id = getOwnerIdFromObjectKey(srcKey);
+    console.log(owner_id)
+    const ownerFirebaseData = await admin.auth().getUser(owner_id);
+    const ownerEmail = ownerFirebaseData.toJSON().email;
+
+    const newMetadata = {
+      sharing: "none",
+      sharingType: "none",
+      sharingWith: "[]",
+      ownerId : owner_id,
+      ownerEmail: ownerEmail,
+      progress: "upcoming"
+    }
+
+    const command = new CopyObjectCommand({
+      "Bucket": "vidzspace",
+      "CopySource" : `/vidzspace/${srcKey}`,
+      "Key": `${prefix + destPath}/${srcPath.split("/").pop()}`,
+      Metadata: newMetadata,
+      MetadataDirective: "REPLACE",
+    });
+    const response = await s3Client.send(command);
+
+    res.json({
+      success: true,
+      newKey: `${prefix + destPath}/${srcPath.split("/").pop()}`
+    })
+
+  } catch(error){
+    console.log(error);
+  }
+}
+
+export const createProject = async (req, res, next) => {
+  const { projName, user_id } = req.body;
+  if (!projName || !user_id) {
+    return res
+      .status(400)
+      .json({ message: "Missing required fields: teamName and user_id" });
+  }
+  try {
+    const userParams = {
+      Bucket: "vidzspace",
+      Prefix: prefix + `${user_id}/`,
+    };
+    const headObjectResponse = await s3Client.send(
+      new ListObjectsV2Command(userParams)
+    );
+    if (headObjectResponse.KeyCount === 0) {
+      console.log("No user found");
+      const userIdParams = {
+        Bucket: "vidzspace",
+        Key: prefix + `${user_id}/`,
+        Body: "",
+      };
+      await s3Client.send(new PutObjectCommand(userIdParams));
+    }
+    console.log("User found");
+    const params = {
+      Bucket: "vidzspace",
+      Key: prefix + `${user_id}/${teamName}/`,
+      Body: "",
+    };
+
+    await s3Client.send(new PutObjectCommand(params));
+    return res.status(200).json({ message: "Team created successfully" });
+  } catch (err) {
+    console.error("Error creating team folder:", err);
+    // Handle specific errors (optional)
+    if (err.code === "AccessDenied") {
+      return res
+        .status(403)
+        .json({ message: "Insufficient permissions to create team folder" });
+    } else if (err.code === "BucketNotFound") {
+      return res.status(404).json({ message: "Bucket not found" });
+    } else {
+      // Generic error handling (improve based on specific needs)
+      return res.status(500).json({ message: "Internal Server Error" });
+    }
   }
 };
