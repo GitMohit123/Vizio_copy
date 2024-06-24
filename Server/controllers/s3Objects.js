@@ -9,9 +9,12 @@ import {
   GetObjectTaggingCommand,
   PutObjectTaggingCommand,
 } from "@aws-sdk/client-s3";
+
+import archiver from "archiver";
+import { PassThrough } from "stream";
+import path from "path";
 import { s3Client } from "../s3config.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { params } from "firebase-functions";
 
 const prefix = "users/";
 
@@ -83,6 +86,140 @@ export const deleteVideoFolder = async (req, res, next) => {
       .send({ message: "Video folder deleted successfully" });
   } catch (error) {
     console.log(error);
+  }
+};
+
+const downloadFile = async (key, res) => {
+  try {
+    console.log("fol", key);
+
+    const command = new GetObjectCommand({
+      Bucket: "vidzspace",
+      Key: key,
+    });
+
+    const { Body, ContentLength } = await s3Client.send(command);
+    // console.log({ Body, ContentLength });
+    // Set the headers to indicate a file download
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${path.basename(key)}`
+    );
+    res.setHeader("Content-Type", "application/octet-stream");
+    //res.setHeader("Content-Length", ContentLength);
+    //res.setHeader("X-Total-Size", ContentLength);
+
+    Body.pipe(res)
+      .on("error", (err) => {
+        console.error("Stream Error:", err);
+        res.status(500).json({ error: "Failed to stream file" });
+      })
+      .on("finish", () => {
+        console.log("Download completed:", key);
+      });
+  } catch (error) {
+    console.error("Error downloading file:", error);
+    res.status(500).json({ error: "Failed to download file" });
+  }
+};
+
+const claculateTotSize = async (contents) => {
+  let totSize = 0;
+
+  for (const item of contents) {
+    const fileCommand = new HeadObjectCommand({
+      Bucket: "vidzspace",
+      Key: item.Key,
+    });
+
+    try {
+      const { ContentLength } = await s3Client.send(fileCommand);
+      totSize += ContentLength;
+    } catch (error) {
+      console.error(`Error fetching file size for ${item.Key}:`, error);
+    }
+  }
+
+  return totSize;
+};
+
+const downloadFolder = async (key, res) => {
+  try {
+    const listCommand = new ListObjectsV2Command({
+      Bucket: "vidzspace",
+      Prefix: key,
+    });
+
+    const { Contents } = await s3Client.send(listCommand);
+
+    console.log(Contents);
+
+    if (!Contents || Contents.length === 0) {
+      return res.status(404).json({ error: "No files found in the folder" });
+    }
+
+    const totSize = await claculateTotSize(Contents);
+
+    console.log(totSize);
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${path.basename(key)}.zip`
+    );
+    res.setHeader("Content-Type", "application/zip");
+    // res.setHeader("X-Total-Size", totSize.toString());
+    //res.setHeader("Transfer-Encoding", "chunked");
+    //res.setHeader("Content-Length", totSize.toString());
+
+    const archive = archiver("zip");
+    // const passThrough = new PassThrough();
+
+    archive.pipe(res);
+
+    const fetchFile = async (item) => {
+      const fileCommand = new GetObjectCommand({
+        Bucket: "vidzspace",
+        Key: item.Key,
+      });
+
+      const { Body } = await s3Client.send(fileCommand);
+      //console.log(Body);
+      return { body: Body, name: path.relative(key, item.Key) };
+    };
+
+    const fetchPromises = Contents.map((item) => fetchFile(item));
+    const files = await Promise.all(fetchPromises);
+
+    for (const file of files) {
+      // console.log("file", file.body, file.name);
+      archive.append(file.body, { name: file.name });
+    }
+
+    await archive.finalize();
+  } catch (error) {
+    console.error("Error downloading folder:", error);
+    res.status(500).json({ error: "Failed to download folder" });
+  }
+};
+
+export const downloadFolderFile = async (req, res, next) => {
+  const { filePath, teamPath, fileName, type } = req.body;
+  const { userId } = req.query;
+
+  console.log("filepath", filePath, userId, teamPath, fileName, type);
+
+  let folprefix;
+  if (!filePath) {
+    folprefix = prefix + `${userId}/${teamPath}/${fileName}`;
+  } else {
+    folprefix = prefix + `${userId}/${teamPath}/${filePath}/${fileName}`;
+  }
+
+  if (type === "file") {
+    await downloadFile(folprefix, res);
+  } else if (type === "folder") {
+    //console.log("folder");
+    await downloadFolder(folprefix, res);
   }
 };
 
