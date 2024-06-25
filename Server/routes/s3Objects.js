@@ -8,6 +8,7 @@ import {
   renameFolderFile,
   copyVideo,
   downloadFolderFile,
+  generationUploadUrl,
 } from "../controllers/s3Objects.js";
 
 const s3router = Router();
@@ -19,5 +20,6 @@ s3router.post("/deletefolder", deleteVideoFolder);
 s3router.post("/rename", renameFolderFile);
 s3router.post("/copyVideo", copyVideo);
 s3router.post("/download", downloadFolderFile);
+s3router.post("/generateUploadUrl", generationUploadUrl);
 
 export default s3router;

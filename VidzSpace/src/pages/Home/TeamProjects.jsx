@@ -36,6 +36,10 @@ const TeamProjects = () => {
     return match ? match[1] : filename;
   };
 
+  useEffect(()=>{
+    console.log("teampath: " + teamPath + " path: " + path)
+  },[path])
+
   //console.log(teamPath);
   const convertBytesToGB = (bytes) => {
     const gigabyte = 1024 * 1024 * 1024; // One gigabyte in bytes

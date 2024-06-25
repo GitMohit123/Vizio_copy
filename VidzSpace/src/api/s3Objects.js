@@ -216,3 +216,64 @@ export const fetchTeamsData = async (path, user_id) => {
     console.log(err);
   }
 };
+
+export const getUploadPresignedUrl = async (
+  filename,
+  contentType,
+  user_id,
+  path
+) => {
+  try {
+    console.log("in api: ", filename, contentType, user_id, path);
+    const metaData = {
+      sharing: "none",
+      sharingType: "none",
+      sharingWith:[],
+      progress: "upcoming",
+    };
+    const response = await axios.post(
+      `/vidzspaceApi/users/s3/generateUploadUrl`,
+      {
+        filename,
+        contentType,
+        user_id,
+        path,
+      },
+      // {
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     Authorization: `Bearer ${idToken}`,
+      //     ...Object.keys(metaData).reduce((acc, key) => {
+      //       acc[`x-amz-meta-${key.toLowerCase()}`] = JSON.stringify(metaData[key]);
+      //       return acc;
+      //     }, {}),
+      //   },
+      //   withCredentials: true,
+      // }
+    );
+   return response.data; // Returning the response data
+  } catch (error) {
+    console.error("Error:", error);
+    throw error; // Re-throwing the error for handling elsewhere if needed
+  }
+};
+
+export const uploadToPresignedUrl1 = async (
+  presignedUrl,
+  file,
+) => {
+  console.log("in apii: ", presignedUrl, file);
+  // Upload file to pre-signed URL
+  const uploadResponse = await axios.put(presignedUrl, file, {
+    headers: {
+      "Content-Type": "video/mp4",
+    },
+    onUploadProgress: (progressEvent) => {
+      const percentCompleted = Math.round(
+        (progressEvent.loaded * 100) / progressEvent.total
+      );
+      console.log(`Upload Progress: ${percentCompleted}%`);
+    },
+  });
+  return uploadResponse.status;
+};

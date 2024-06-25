@@ -15,17 +15,17 @@ import { PassThrough } from "stream";
 import path from "path";
 import { s3Client } from "../s3config.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
+import { params } from "firebase-functions";
 import admin from "../index.js";
 
 const prefix = "users/";
 
 function getOwnerIdFromObjectKey(Key) {
   const parts = Key.split('/');
-  const prefixLength = prefix.split('/').length;
+  const prefixLength = prefix.split('/').length - 1;
   // Ensure there are at least 2 parts (users, username)
   if (parts.length > prefixLength) {
-      // console.log(parts)
+      console.log(parts)
       return parts[prefixLength];
   } else {
       return null;
@@ -431,14 +431,10 @@ function getFilesForSubfolder(subfolderKey, objects) {
     if (item.Key.startsWith(subfolderKey)) {
       const relativePath = item.Key.slice(subfolderKey.length);
 
-      if (
-        relativePath.endsWith("/") &&
-        relativePath.slice(0, -1).indexOf("/") === -1
-      )
+      if (relativePath.endsWith("/") && relativePath.slice(0, -1).indexOf('/') === -1)
         subfolders.push({ Key: relativePath.slice(0, -1), Type: "folder" });
 
-      // if (relativePath.indexOf('/') === -1 && relativePath !== "") subFiles.push( { ...item, Key: relativePath }); //is a file
-      if (relativePath.indexOf("/") === -1 && relativePath !== "")
+     if (relativePath.indexOf("/") === -1 && relativePath !== "")
         subFiles.push(item); //is a file
     }
   });
@@ -660,7 +656,7 @@ export const listRoot = async (req, res, next) => {
   }
 };
 
-export const copyVideo = async (req, res) => { //destPath = path after users/
+export const copyVideo = async (req, res) => { //destPath = path after 'users/'
   console.log("hi");
   const { srcKey, destPath } = req.body;
 
@@ -682,7 +678,7 @@ export const copyVideo = async (req, res) => { //destPath = path after users/
     const command = new CopyObjectCommand({
       "Bucket": "vidzspace",
       "CopySource" : `/vidzspace/${srcKey}`,
-      "Key": `${prefix + destPath}/${srcPath.split("/").pop()}`,
+      "Key": `${prefix + destPath}/${srcKey.split("/").pop()}`,
       Metadata: newMetadata,
       MetadataDirective: "REPLACE",
     });
@@ -690,7 +686,7 @@ export const copyVideo = async (req, res) => { //destPath = path after users/
 
     res.json({
       success: true,
-      newKey: `${prefix + destPath}/${srcPath.split("/").pop()}`
+      newKey: `${prefix + destPath}/${srcKey.split("/").pop()}`
     })
 
   } catch(error){
@@ -698,51 +694,37 @@ export const copyVideo = async (req, res) => { //destPath = path after users/
   }
 }
 
-export const createProject = async (req, res, next) => {
-  const { projName, user_id } = req.body;
-  if (!projName || !user_id) {
-    return res
-      .status(400)
-      .json({ message: "Missing required fields: teamName and user_id" });
-  }
+export const generationUploadUrl = async (req, res, next) => {
   try {
-    const userParams = {
-      Bucket: "vidzspace",
-      Prefix: prefix + `${user_id}/`,
-    };
-    const headObjectResponse = await s3Client.send(
-      new ListObjectsV2Command(userParams)
-    );
-    if (headObjectResponse.KeyCount === 0) {
-      console.log("No user found");
-      const userIdParams = {
-        Bucket: "vidzspace",
-        Key: prefix + `${user_id}/`,
-        Body: "",
-      };
-      await s3Client.send(new PutObjectCommand(userIdParams));
-    }
-    console.log("User found");
-    const params = {
-      Bucket: "vidzspace",
-      Key: prefix + `${user_id}/${teamName}/`,
-      Body: "",
-    };
+    const { filename, contentType, user_id, path } =
+      req.body;
 
-    await s3Client.send(new PutObjectCommand(params));
-    return res.status(200).json({ message: "Team created successfully" });
-  } catch (err) {
-    console.error("Error creating team folder:", err);
-    // Handle specific errors (optional)
-    if (err.code === "AccessDenied") {
-      return res
-        .status(403)
-        .json({ message: "Insufficient permissions to create team folder" });
-    } else if (err.code === "BucketNotFound") {
-      return res.status(404).json({ message: "Bucket not found" });
-    } else {
-      // Generic error handling (improve based on specific needs)
-      return res.status(500).json({ message: "Internal Server Error" });
-    }
+    const fullPath = `users/${path}/${filename}`
+
+    const {
+      "x-amz-meta-sharing": sharing,
+      "x-amz-meta-sharingtype": sharingType,
+      "x-amz-meta-sharingwith": sharingWith,
+      "x-amz-meta-progress": progress,
+    } = req.headers;
+    const command = new PutObjectCommand({
+      Bucket: "vidzspace",
+      Key: fullPath,
+      ContentType: contentType,
+      Metadata: {
+        sharing: sharing || "none",
+        sharingtype: sharingType || "none",
+        sharingwith: sharingWith || "[]",
+        progress: progress || "upcoming",
+      },
+    });
+    const url = await getSignedUrl(s3Client, command);
+    return res.status(201).json({
+      success: true,
+      url,
+    });
+  } catch (error) {
+    console.log(error);
+    next(error);
   }
 };

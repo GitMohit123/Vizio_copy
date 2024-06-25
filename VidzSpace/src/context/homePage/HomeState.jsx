@@ -64,6 +64,9 @@ const HomeState = ({ children }) => {
   const [reName, setReName] = useState("");
   const [renamePopup, setRenamePopup] = useState(false);
   const [itemToRename, setItemToRename] = useState({});
+  const [isUploadingProgressOpen, setIsUploadingProgressOpen] = useState(false);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const [selectedFilesWithUrls, setSelectedFilesWithUrls] = useState([]);
 
   return (
     <HomeContext.Provider
@@ -110,6 +113,12 @@ const HomeState = ({ children }) => {
         setVideoPreview,
         setPreviewPopup,
         previewPopup,
+        isUploadingProgressOpen,
+        setIsUploadingProgressOpen,
+        isUploadingFiles,
+        setIsUploadingFiles,
+        selectedFilesWithUrls,
+        setSelectedFilesWithUrls
       }}
     >
       {children}

@@ -1,4 +1,4 @@
-import React, { useCallback, useContext } from "react";
+import React, { useCallback, useContext, useEffect } from "react";
 import { useState } from "react";
 import { MdOutlineKeyboardArrowDown } from "react-icons/md";
 import { useDispatch } from "react-redux";
@@ -9,6 +9,9 @@ import { setProjectState } from "../../app/Actions/cmsAction";
 import { useDropzone } from "react-dropzone";
 import HomeContext from "../../context/homePage/HomeContext";
 import useDrivePicker from "react-google-drive-picker";
+import {getUploadPresignedUrl} from "../../api/s3Objects";
+import {uploadToPresignedUrl1} from '../../api/s3Objects'
+import {setLoader} from "../../app/Actions/cmsAction";
 
 const ProjectAdd = () => {
   const dispatch = useDispatch();
@@ -19,10 +22,45 @@ const ProjectAdd = () => {
     setIsUploadDropdownOpen,
     setSelectedFiles,
     setSelectedFolders,
+    selectedFiles,
+    selectedFolders,
     isDragging,
     setIsDragging,
+    isUploadingProgressOpen,
+    setIsUploadingProgressOpen,
+    setIsUploadingFiles,
+    teamPath,
+    path,
+    user,
+    selectedFilesWithUrls,
+    setSelectedFilesWithUrls,
   } = useContext(HomeContext);
   const [openPicker, authResponse] = useDrivePicker();
+  
+  // const [selectedFilesWithUrls, setSelectedFilesWithUrls] = useState([]);
+  const [projectName, setProjectName] = useState("untitled project");
+  const [currUploadingFile, setCurrUploadingFile] = useState(null);
+
+  const uploadToPresignedUrl = async (//direct api call
+    presignedUrl,
+    file,
+  ) => {
+    console.log("in apii: ", presignedUrl, file);
+    // Upload file to pre-signed URL
+    const uploadResponse = await axios.put(presignedUrl, file, {
+      headers: {
+        "Content-Type": "video/mp4",
+      },
+      onUploadProgress: (progressEvent) => {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
+        console.log(`Upload Progress: ${percentCompleted}%`);
+
+      },
+    });
+    return uploadResponse.status;
+  };
 
   const handleOpenPicker = () => {
     openPicker({
@@ -58,6 +96,7 @@ const ProjectAdd = () => {
   };
   const handleCancelClick = () => {
     dispatch(setProjectState(false));
+    setIsUploadingProgressOpen(false);
     setSelectedFiles([]);
     setSelectedFolders([]);
   };
@@ -89,6 +128,126 @@ const ProjectAdd = () => {
     setSelectedFolders((prevFolders) => [...prevFolders, ...folderFiles]);
     setIsDragging(false);
   }, []);
+
+  const handleCreateProjectClick = async()=>{
+    dispatch(setProjectState(false));
+    setIsUploadingFiles(true);
+    dispatch(setLoader(true));
+    
+      const ownerId = user?.uid; //for testing only
+      // const response = await generate(`${ownerId}/${teamPath}/${path}`)
+      const files = selectedFiles.length > 0 ? [...selectedFiles, ...selectedFolders] : selectedFolders;
+
+      const uploadPromises = files.map(async (file) => {
+        const id = Date.now();
+        const videoFileName = `video_${id}_${file.name}`;
+        const contentType = file.type;
+        const isInAFolder = file.path && file.path.includes("/");
+        const fullPath = isInAFolder? `${ownerId}/${teamPath}/${projectName}/${file.path.slice(1, file.name.length * (-1) - 1)}` : `${ownerId}/${teamPath}/${projectName}`;
+        // const fullPath = `${ownerId}/${teamPath}/${path}/${projectName}`; //if want nested projects
+        try {
+          const result = await getUploadPresignedUrl(
+            videoFileName,
+            contentType,
+            ownerId,
+            fullPath
+          );
+          console.log(result.url);
+          return { file, presignedUrl: result.url, isUploading: false };
+        } catch (error) {
+          console.log("Error generating urls", error);
+          return null;
+        }
+      });
+  
+      // Wait for all uploads to finish
+      try {
+        const validFilesWithUrls = (await Promise.all(uploadPromises)).filter(
+          (fileWithUrl) => fileWithUrl !== null
+        );
+        const filesWithUrls = [...validFilesWithUrls , ...selectedFilesWithUrls];
+        setSelectedFilesWithUrls((prevSelectedFiles) => [
+          ...prevSelectedFiles,
+          ...validFilesWithUrls,
+        ]);
+        console.log("All files url generated successfully");
+
+        uploadFile(filesWithUrls);
+
+      } catch (error) {
+        console.log("Error generating urls", error);
+      }
+
+    }
+
+    const uploadFile = async (filesWithUrls) => {
+      console.log("hi")
+      const sharing = "none";
+      const sharing_type = "none";
+      const sharing_with = [];
+      const progress = "upcoming";
+      for (let i = 0; i < filesWithUrls.length; i++) {
+        const { file, presignedUrl } = filesWithUrls[i];
+
+        setSelectedFilesWithUrls((files)=>{ files[i].isUploading = true; return files; })
+  
+        try {
+          const data = await uploadToPresignedUrl1(
+            presignedUrl,
+            file,
+            sharing,
+            sharing_type,
+            sharing_with,
+            progress
+          );
+          // toast.success("Uploaded successful");
+          console.log("File uploaded successfully", data);
+          setSelectedFilesWithUrls((files)=>{ files[i].isUploading = false; return files; })
+        } catch (error) {
+          console.log("Error uploading file", file.name, error);
+          // Handle error if required
+        }
+      }
+      // for (let i = 0; i < selectedFolderWithUrls.length; i++) {
+      //   const { file, presignedUrl } = selectedFolderWithUrls[i];
+  
+      //   try {
+      //     const data = await uploadToPresignedUrl(
+      //       presignedUrl,
+      //       file,
+      //       sharing,
+      //       sharing_type,
+      //       sharing_with
+      //     );
+      //     toast.success("Uploaded successful");
+      //     console.log(data);
+      //   } catch (error) {
+      //     console.log("Error uploading file", file.name, error);
+      //     // Handle error if required
+      //   }
+      // }
+
+      if (!selectedFilesWithUrls) {
+        console.log("Files not found");
+      }
+      
+      setIsUploadingFiles(false);
+      dispatch(setLoader(false));
+      setIsUploadingProgressOpen(false);
+      setSelectedFilesWithUrls([]);
+      // setRefresh((prev) => !prev);
+      
+    };
+  
+
+  useEffect(() => {
+    if(selectedFiles.length > 0 || selectedFolders.length > 0){
+      setIsUploadingProgressOpen(true);
+    }
+    else setIsUploadingProgressOpen(false);
+    console.log(selectedFiles, selectedFolders)
+  }, [selectedFiles, selectedFolders]);
+  
 
   const {
     getRootProps,
@@ -158,6 +317,7 @@ const ProjectAdd = () => {
             <input
               type="text"
               className="bg-black border-2 border-white rounded-md p-1 "
+              onChange={(e)=>{setProjectName(e.target.value)}}
             />
           </div>
           <div className="flex flex-col gap-3 w-[40%] text-white">
@@ -273,7 +433,7 @@ const ProjectAdd = () => {
             Cancel
           </motion.div>
           <motion.button
-            // onClick={handleCreateTeamClick}
+            onClick={handleCreateProjectClick}
             className={`p-2 px-6 rounded-xl bg-[#f8ff2a]`}
           >
             Create

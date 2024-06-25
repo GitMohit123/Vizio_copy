@@ -28,6 +28,7 @@ import TeamInfo from "./TeamInfo";
 import UpgradePlan from "./UpgradePlan";
 import ProjectAdd from "../../components/PopUp/ProjectAdd";
 import FirebaseContext from "../../context/firebase/FirebaseContext";
+import UploadingProgress from "../../components/PopUp/UploadingProgress";
 
 const Homepage = () => {
   const dispatch = useDispatch();
@@ -47,6 +48,10 @@ const Homepage = () => {
     isTeamDropDownOpen,
     setIsTeamDropDownOpen,
     path,
+    deleteLoader,
+    setDeleteLoader,
+    loader,
+    isUploadingProgressOpen
   } = useContext(HomeContext);
 
   const { handleSignOut } = useContext(FirebaseContext);
@@ -252,6 +257,7 @@ const Homepage = () => {
         {/* Projects */}
         <div className="relative flex flex-col w-full h-full bg-[#242426] rounded-lg p-5 overflow-y-auto">
           {projectState && <ProjectAdd />}
+          {isUploadingProgressOpen && <UploadingProgress />}
           {teamState && <TeamAdd />}
           {optionState === "Team Projects" && <TeamProjects />}
           {optionState === "Team Info" && <TeamInfo />}
