@@ -11,7 +11,7 @@ import HomeContext from "../../context/homePage/HomeContext";
 import useDrivePicker from "react-google-drive-picker";
 import {getUploadPresignedUrl} from "../../api/s3Objects";
 import {uploadToPresignedUrl1} from '../../api/s3Objects'
-import {setLoader} from "../../app/Actions/cmsAction";
+// import {setLoader} from "../../app/Actions/cmsAction";
 
 const ProjectAdd = () => {
   const dispatch = useDispatch();
@@ -34,6 +34,7 @@ const ProjectAdd = () => {
     user,
     selectedFilesWithUrls,
     setSelectedFilesWithUrls,
+    setLoad
   } = useContext(HomeContext);
   const [openPicker, authResponse] = useDrivePicker();
   
@@ -132,7 +133,8 @@ const ProjectAdd = () => {
   const handleCreateProjectClick = async()=>{
     dispatch(setProjectState(false));
     setIsUploadingFiles(true);
-    dispatch(setLoader(true));
+    // dispatch(setLoader(true));
+    setLoad(true);
     
       const ownerId = user?.uid; //for testing only
       // const response = await generate(`${ownerId}/${teamPath}/${path}`)
@@ -232,7 +234,8 @@ const ProjectAdd = () => {
       }
       
       setIsUploadingFiles(false);
-      dispatch(setLoader(false));
+      // dispatch(setLoader(false));
+      setLoad(false);
       setIsUploadingProgressOpen(false);
       setSelectedFilesWithUrls([]);
       // setRefresh((prev) => !prev);

@@ -43,7 +43,7 @@ const UploadingProgress = () => {
                     selectedFilesWithUrls.length>=index + selectedFiles.length && selectedFilesWithUrls[index + selectedFiles.length]?.isUploading===true?
                      <div className="w-6 h-6 rounded-full animate-spin border border-solid border-yellow-500 border-t-transparent shadow-md"></div>
                     :
-                     <p onClick={()=>{setSelectedFiles((currFiles)=>currFiles.filter((currFile)=>currFile.path !== file.path || currFile.size !== file.size))}} className="cursor-pointer">
+                     <p onClick={()=>{setSelectedFolders((currFiles)=>currFiles.filter((currFile)=>currFile.path !== file.path || currFile.size !== file.size))}} className="cursor-pointer">
                       x</p>
                     }
                   </div>
