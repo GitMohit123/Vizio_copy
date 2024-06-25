@@ -20,7 +20,7 @@ import admin from "../index.js";
 
 const prefix = "users/";
 
-function getOwnerIdFromObjectKey(Key) {
+function getOwnerIdFromObjectKey(Key) { //key = users/...
   const parts = Key.split('/');
   const prefixLength = prefix.split('/').length - 1;
   // Ensure there are at least 2 parts (users, username)
@@ -700,6 +700,9 @@ export const generationUploadUrl = async (req, res, next) => {
       req.body;
 
     const fullPath = `users/${path}/${filename}`
+    const owner_id = getOwnerIdFromObjectKey(fullPath); //for testing only
+    const ownerFirebaseData = await admin.auth().getUser(owner_id);
+    const ownerName = ownerFirebaseData.toJSON().displayName;
 
     const {
       "x-amz-meta-sharing": sharing,
@@ -716,6 +719,7 @@ export const generationUploadUrl = async (req, res, next) => {
         sharingtype: sharingType || "none",
         sharingwith: sharingWith || "[]",
         progress: progress || "upcoming",
+        ownerName: ownerName || "cant read",
       },
     });
     const url = await getSignedUrl(s3Client, command);

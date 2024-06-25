@@ -10,7 +10,8 @@ import { useDropzone } from "react-dropzone";
 import HomeContext from "../../context/homePage/HomeContext";
 import useDrivePicker from "react-google-drive-picker";
 import {getUploadPresignedUrl} from "../../api/s3Objects";
-import {uploadToPresignedUrl1} from '../../api/s3Objects'
+// import {uploadToPresignedUrl1} from '../../api/s3Objects'
+import axios from "axios";
 // import {setLoader} from "../../app/Actions/cmsAction";
 
 const ProjectAdd = () => {
@@ -194,13 +195,9 @@ const ProjectAdd = () => {
         setSelectedFilesWithUrls((files)=>{ files[i].isUploading = true; return files; })
   
         try {
-          const data = await uploadToPresignedUrl1(
+          const data = await uploadToPresignedUrl(
             presignedUrl,
-            file,
-            sharing,
-            sharing_type,
-            sharing_with,
-            progress
+            file
           );
           // toast.success("Uploaded successful");
           console.log("File uploaded successfully", data);

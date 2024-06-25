@@ -258,22 +258,22 @@ export const getUploadPresignedUrl = async (
   }
 };
 
-export const uploadToPresignedUrl1 = async (
-  presignedUrl,
-  file,
-) => {
-  console.log("in apii: ", presignedUrl, file);
-  // Upload file to pre-signed URL
-  const uploadResponse = await axios.put(presignedUrl, file, {
-    headers: {
-      "Content-Type": "video/mp4",
-    },
-    onUploadProgress: (progressEvent) => {
-      const percentCompleted = Math.round(
-        (progressEvent.loaded * 100) / progressEvent.total
-      );
-      console.log(`Upload Progress: ${percentCompleted}%`);
-    },
-  });
-  return uploadResponse.status;
-};
+// export const uploadToPresignedUrl1 = async (
+//   presignedUrl,
+//   file,
+// ) => {
+//   console.log("in apii: ", presignedUrl, file);
+//   // Upload file to pre-signed URL
+//   const uploadResponse = await axios.put(presignedUrl, file, {
+//     headers: {
+//       "Content-Type": "video/mp4",
+//     },
+//     onUploadProgress: (progressEvent) => {
+//       const percentCompleted = Math.round(
+//         (progressEvent.loaded * 100) / progressEvent.total
+//       );
+//       console.log(`Upload Progress: ${percentCompleted}%`);
+//     },
+//   });
+//   return uploadResponse.status;
+// };

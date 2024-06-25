@@ -51,7 +51,8 @@ const Homepage = () => {
     deleteLoader,
     setDeleteLoader,
     loader,
-    isUploadingProgressOpen
+    isUploadingProgressOpen,
+    load
   } = useContext(HomeContext);
 
   const { handleSignOut } = useContext(FirebaseContext);
@@ -81,7 +82,7 @@ const Homepage = () => {
       }
     };
     fetchData();
-  }, [currentTeam, user, path]);
+  }, [currentTeam, user, path, load]);
 
   useEffect(() => {
     const fetchTeams = async () => {
