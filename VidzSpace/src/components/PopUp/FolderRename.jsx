@@ -4,19 +4,44 @@ import { MdDriveFileRenameOutline } from "react-icons/md";
 import HomeContext from "../../context/homePage/HomeContext";
 import { motion } from "framer-motion";
 import { fileFolderRename } from "../../api/s3Objects";
+import { fetchTeamsData } from "../../api/s3Objects";
+import { setCMSData } from "../../app/Actions/cmsAction";
+import { useDispatch } from "react-redux";
 
 const FolderRename = () => {
+  const dispatch = useDispatch();
   const {
     reName,
     setReName,
+    currentTeam,
     setRenamePopup,
     itemToRename,
-    setItemToRename,
     teamPath,
     user,
+    path,
+    load,
+    setLoad,
   } = useContext(HomeContext);
 
+  const fetchData = async () => {
+    const currentTeamPath = currentTeam;
+    try {
+      const userId = user?.uid;
+      const response = await fetchTeamsData(
+        `${userId}/${currentTeamPath}/${path}`,
+        userId
+      );
+      const filesData = response?.files;
+      const folderData = response?.folders;
+      dispatch(setCMSData(filesData, folderData));
+    } catch (err) {
+      console.log("Unable to fetch data");
+    }
+  };
+
   const handleRename = () => {
+    setRenamePopup(false);
+    setLoad(true);
     fileFolderRename(
       itemToRename?.type,
       itemToRename?.path,
@@ -27,8 +52,14 @@ const FolderRename = () => {
     )
       .then((data) => {
         console.log(data);
+        fetchData();
       })
-      .catch((error) => console.log(error));
+      .catch((error) => console.log(error))
+      .finally(() => {
+        setTimeout(() => {
+          setLoad(false);
+        }, 1000);
+      });
   };
   return (
     <div className="absolute h-[95%] w-[95%] flex justify-center items-center z-10 bg-opacity-10 bg-[#2f2f2f] backdrop-blur-sm">

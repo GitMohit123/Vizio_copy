@@ -7,6 +7,7 @@ import {
   deleteVideoFolder,
   renameFolderFile,
   copyVideo,
+  downloadFolderFile,
 } from "../controllers/s3Objects.js";
 
 const s3router = Router();
@@ -17,5 +18,6 @@ s3router.delete("/delete", deleteVideo);
 s3router.post("/deletefolder", deleteVideoFolder);
 s3router.post("/rename", renameFolderFile);
 s3router.post("/copyVideo", copyVideo);
+s3router.post("/download", downloadFolderFile);
 
 export default s3router;

@@ -119,6 +119,63 @@ export const fileFolderRename = async (
   }
 };
 
+export const download = async (filePath, teamPath, userId, fileName, type) => {
+  try {
+    console.log("filepath", filePath);
+
+    const response = await axios.post(
+      `/vidzspaceApi/users/s3/download`,
+      {
+        filePath,
+        teamPath,
+        fileName,
+        type,
+      },
+
+      {
+        params: {
+          userId,
+        },
+        headers: {
+          "Content-Type": "application/json",
+        },
+        responseType: "blob",
+        onDownloadProgress: (progressEvent) => {
+          const loaded = progressEvent.loaded;
+          //const total = progressEvent.total;
+          console.log(loaded);
+          // const percentage = Math.round((loaded / total) * 100);
+          // console.log(`Download progress: ${percentage}%`);
+          // You can update a progress bar here
+        },
+      }
+    );
+
+    console.log(response);
+
+    console.log("Download response:", response?.data);
+
+    const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
+
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+
+    if (type === "folder") {
+      link.setAttribute("download", `${fileName}.zip`);
+    } else if (type === "file") {
+      link.setAttribute("download", fileName);
+    }
+
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode.removeChild(link);
+
+    return "download initiaed";
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const createTeam = async (teamName, userId) => {
   try {
     let encodedTeamName = teamName.includes("/")

@@ -21,7 +21,6 @@ const HomeState = ({ children }) => {
   const folders = useSelector((state) => state.cms.folders);
   const files = useSelector((state) => state.cms.files);
   const path = useSelector((state) => state.cms.path);
-  const loader = useSelector((state) => state.cms.deleteLoader);
 
   //cms State
   const teamPath = useSelector((state) => state.cms.teamPath);
@@ -61,7 +60,7 @@ const HomeState = ({ children }) => {
   const dispatch = useDispatch();
   const [teamName, setTeamName] = useState("");
   const [isTeamDropDownOpen, setIsTeamDropDownOpen] = useState(false);
-  const [deleteLoader, setDeleteLoader] = useState(false);
+  const [load, setLoad] = useState(false);
   const [reName, setReName] = useState("");
   const [renamePopup, setRenamePopup] = useState(false);
   const [itemToRename, setItemToRename] = useState({});
@@ -73,16 +72,17 @@ const HomeState = ({ children }) => {
         user,
         renamePopup,
         setRenamePopup,
+        load,
+        setLoad,
         itemToRename,
         setItemToRename,
-        loader,
         reName,
         setReName,
         team,
+
         currentTeam,
         teamState,
-        deleteLoader,
-        setDeleteLoader,
+
         teamName,
         setTeamName,
         teamPath,

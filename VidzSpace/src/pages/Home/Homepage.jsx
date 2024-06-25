@@ -47,9 +47,6 @@ const Homepage = () => {
     isTeamDropDownOpen,
     setIsTeamDropDownOpen,
     path,
-    deleteLoader,
-    setDeleteLoader,
-    loader,
   } = useContext(HomeContext);
 
   const { handleSignOut } = useContext(FirebaseContext);
@@ -63,6 +60,7 @@ const Homepage = () => {
 
   useEffect(() => {
     const currentTeamPath = currentTeam;
+
     const fetchData = async () => {
       try {
         const userId = user?.uid;
@@ -78,7 +76,7 @@ const Homepage = () => {
       }
     };
     fetchData();
-  }, [currentTeam, user, path, loader]);
+  }, [currentTeam, user, path]);
 
   useEffect(() => {
     const fetchTeams = async () => {

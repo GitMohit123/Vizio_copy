@@ -37,10 +37,3 @@ export const routePath = (path) => {
     path: path,
   };
 };
-
-export const setLoader = (value) => {
-  return {
-    type: "SET_LOADER",
-    loader: value,
-  };
-};

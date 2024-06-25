@@ -7,13 +7,14 @@ import { motion } from "framer-motion";
 import { useDispatch } from "react-redux";
 import PreviewLoader from "../../components/PreviewLoader";
 import { useEffect } from "react";
+import { setCMSData } from "../../app/Actions/cmsAction";
 import {
   routePath,
-  setLoader,
   setPath,
   setPathEmpty,
   setProjectState,
 } from "../../app/Actions/cmsAction";
+import { download } from "../../api/s3Objects";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { ImFilesEmpty } from "react-icons/im";
 import ProgressBar from "../../components/Project/ProgressBar";
@@ -22,16 +23,10 @@ import VideoPreview from "../../components/VideoPreview";
 import { useNavigate } from "react-router-dom";
 import { deleteVideo, deleteVideoFolder } from "../../api/s3Objects";
 import FolderRename from "../../components/PopUp/FolderRename";
+import { fetchTeamsData } from "../../api/s3Objects";
 const TeamProjects = () => {
-  const {
-    teamPath,
-    files,
-    folders,
-    path,
-    deleteLoader,
-    setDeleteLoader,
-    loader,
-  } = useContext(HomeContext);
+  const { teamPath, files, folders, path, load, setLoad } =
+    useContext(HomeContext);
 
   console.log("path", path);
   const display = path.split("/");
@@ -72,12 +67,11 @@ const TeamProjects = () => {
     }
   };
 
-  const [loading, setLoading] = useState(false);
   const handleRoute = async (file_path) => {
-    setLoading(true);
+    setLoad(true);
     dispatch(setPath(file_path));
     setTimeout(() => {
-      setLoading(false);
+      setLoad(false);
     }, 1000);
   };
   const handleRouteClick = (display_path) => {
@@ -96,10 +90,27 @@ const TeamProjects = () => {
 
   const [selectedItem, setSelectedItem] = useState({});
 
-  const { itemToRename, setItemToRename } = useContext(HomeContext);
+  const { itemToRename, setItemToRename, currentTeam } =
+    useContext(HomeContext);
 
   const handleThreeDotsClick = (type, index, path) => {
     setSelectedItem({ type, index, path });
+  };
+
+  const fetchData = async () => {
+    const currentTeamPath = currentTeam;
+    try {
+      const userId = user?.uid;
+      const response = await fetchTeamsData(
+        `${userId}/${currentTeamPath}/${path}`,
+        userId
+      );
+      const filesData = response?.files;
+      const folderData = response?.folders;
+      dispatch(setCMSData(filesData, folderData));
+    } catch (err) {
+      console.log("Unable to fetch data");
+    }
   };
 
   const handleRename = (type, index, path, name) => {
@@ -120,41 +131,49 @@ const TeamProjects = () => {
   };
 
   const handleDelete = (url) => {
-    dispatch(setLoader(true));
-    console.log(loader);
+    //console.log(deleteLoader);
+    setLoad(true);
+
+    setSelectedItem(null);
     deleteVideo(url)
       .then((data) => {
         console.log(data);
-        setTimeout(() => {
-          dispatch(setLoader(false));
-        }, 1000);
+
+        fetchData();
       })
       .catch((error) => {
         console.log(error);
+      })
+      .finally(() => {
+        setTimeout(() => {
+          setLoad(false);
+        }, 1000);
       });
 
     //dispatch(setLoader(false));
   };
 
-  useEffect(() => {
-    console.log("Loader state changed:", loader);
-  }, [loader]);
   const { user } = useContext(HomeContext);
 
   const handleDeleteFolder = (folderKey) => {
-    //setDeleteLoader(true);
-    dispatch(setLoader(true));
+    // dispatch(setLoader(true));
     const userId = user?.uid;
     console.log(userId, folderKey);
+    setSelectedItem(null);
+    setLoad(true);
     deleteVideoFolder(folderKey, userId, teamPath, path)
       .then((data) => {
         console.log(data);
-        setTimeout(() => {
-          dispatch(setLoader(false));
-        }, 1000);
+
+        fetchData();
       })
       .catch((error) => {
         console.log(error);
+      })
+      .finally(() => {
+        setTimeout(() => {
+          setLoad(false);
+        }, 1000);
       });
   };
 
@@ -163,6 +182,20 @@ const TeamProjects = () => {
   //console.log(selectedItem);
 
   console.log(itemToRename);
+
+  const handleDownload = (filePath, fileName, type) => {
+    const userId = user?.uid;
+    setSelectedItem(null);
+    setLoad(true);
+    download(filePath, teamPath, userId, fileName, type)
+      .then((data) => {
+        console.log(data);
+      })
+      .catch((error) => console.log(error))
+      .finally(() => {
+        setLoad(false);
+      });
+  };
 
   return (
     <>
@@ -198,13 +231,7 @@ const TeamProjects = () => {
         </>
       ) : ( */}
 
-      {loading && (
-        <>
-          <PreviewLoader />
-        </>
-      )}
-
-      {loader && (
+      {load && (
         <>
           <PreviewLoader />
         </>
@@ -216,7 +243,7 @@ const TeamProjects = () => {
         </>
       )}
 
-      <div className={`transition ${loading || loader ? "blur-content" : ""}`}>
+      <div className={`transition ${load ? "blur-content" : ""}`}>
         {files.length === 0 && folders.length === 0 && !path ? (
           <div className="h-full w-full flex justify-center items-center">
             <motion.div
@@ -320,7 +347,12 @@ const TeamProjects = () => {
                           <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
                             Share
                           </p>
-                          <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
+                          <p
+                            className="text-white hover:bg-slate-800 py-1 rounded-xl px-1"
+                            onClick={() =>
+                              handleDownload(path, folder?.Key, "folder")
+                            }
+                          >
                             Download
                           </p>
                           <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
@@ -419,7 +451,12 @@ const TeamProjects = () => {
                           <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
                             Share
                           </p>
-                          <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
+                          <p
+                            className="text-white hover:bg-slate-800 py-1 rounded-xl px-1"
+                            onClick={() =>
+                              handleDownload(path, file?.Key, "file")
+                            }
+                          >
                             Download
                           </p>
                           <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
