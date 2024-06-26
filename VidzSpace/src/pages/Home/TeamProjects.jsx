@@ -36,9 +36,9 @@ const TeamProjects = () => {
     return match ? match[1] : filename;
   };
 
-  useEffect(()=>{
-    console.log("teampath: " + teamPath + " path: " + path)
-  },[path])
+  useEffect(() => {
+    console.log("teampath: " + teamPath + " path: " + path);
+  }, [path]);
 
   //console.log(teamPath);
   const convertBytesToGB = (bytes) => {
@@ -94,8 +94,13 @@ const TeamProjects = () => {
 
   const [selectedItem, setSelectedItem] = useState({});
 
-  const { itemToRename, setItemToRename, currentTeam } =
-    useContext(HomeContext);
+  const {
+    itemToRename,
+    setItemToRename,
+    currentTeam,
+    selectedProgressItem,
+    setSelectedProgressItem,
+  } = useContext(HomeContext);
 
   const handleThreeDotsClick = (type, index, path) => {
     setSelectedItem({ type, index, path });
@@ -185,7 +190,7 @@ const TeamProjects = () => {
 
   //console.log(selectedItem);
 
-  console.log(itemToRename);
+  //console.log(itemToRename, selectedProgressItem);
 
   const handleDownload = (filePath, fileName, type) => {
     const userId = user?.uid;
@@ -267,7 +272,8 @@ const TeamProjects = () => {
                   className="p-4 bg-[#35353a] rounded-lg text-white relative cursor-pointer"
                   onDoubleClick={handleDoubleClick}
                 >
-                  <ProgressBar />
+                  <ProgressBar doc={folder} />
+
                   <div className="flex flex-col gap-2 w-full px-2 rounded-md">
                     {folder?.innerFiles.length !== 0 ||
                     folder?.innerFolders.length !== 0 ? (
@@ -399,8 +405,9 @@ const TeamProjects = () => {
                   className="p-4 bg-[#35353a] rounded-lg text-white relative cursor-pointer"
                   onDoubleClick={handleDoubleClick}
                 >
-                  <ProgressBar />
                   <div className="flex flex-col h-full w-full gap-2">
+                    <ProgressBar doc={file} />
+
                     <video
                       className="rounded-lg object-cover aspect-square w-full h-40 cursor-pointer"
                       key={index}

@@ -68,6 +68,8 @@ const HomeState = ({ children }) => {
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const [selectedFilesWithUrls, setSelectedFilesWithUrls] = useState([]);
 
+  const [selectedProgressItem, setSelectedProgressItem] = useState({});
+
   return (
     <HomeContext.Provider
       value={{
@@ -75,6 +77,8 @@ const HomeState = ({ children }) => {
         user,
         renamePopup,
         setRenamePopup,
+        selectedProgressItem,
+        setSelectedProgressItem,
         load,
         setLoad,
         itemToRename,
@@ -118,7 +122,7 @@ const HomeState = ({ children }) => {
         isUploadingFiles,
         setIsUploadingFiles,
         selectedFilesWithUrls,
-        setSelectedFilesWithUrls
+        setSelectedFilesWithUrls,
       }}
     >
       {children}

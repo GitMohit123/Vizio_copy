@@ -20,15 +20,16 @@ import admin from "../index.js";
 
 const prefix = "users/";
 
-function getOwnerIdFromObjectKey(Key) { //key = users/...
-  const parts = Key.split('/');
-  const prefixLength = prefix.split('/').length - 1;
+function getOwnerIdFromObjectKey(Key) {
+  //key = users/...
+  const parts = Key.split("/");
+  const prefixLength = prefix.split("/").length - 1;
   // Ensure there are at least 2 parts (users, username)
   if (parts.length > prefixLength) {
-      console.log(parts)
-      return parts[prefixLength];
+    console.log(parts);
+    return parts[prefixLength];
   } else {
-      return null;
+    return null;
   }
 }
 
@@ -237,8 +238,72 @@ export const downloadFolderFile = async (req, res, next) => {
   }
 };
 
+export const updateProgress = async (req, res, next) => {
+  const { type, path, newProgress, teamPath, filefoldername } = req.body;
+  const { userId } = req.query;
+
+  console.log(
+    "type",
+    type,
+    userId,
+    path,
+    newProgress,
+    teamPath,
+    filefoldername
+  );
+
+  let folprefix;
+  if (!path) {
+    folprefix = prefix + `${userId}/${teamPath}/${filefoldername}`;
+  } else {
+    folprefix = prefix + `${userId}/${teamPath}/${path}/${filefoldername}`;
+  }
+
+  console.log(folprefix);
+
+  if (type === "file") {
+    await updateObjectMetadata(folprefix, newProgress);
+
+    res.status(200).json({ message: "Metadata updated successfully" });
+  } else {
+    res.status(200).json({ message: "Object Type undefined" });
+  }
+};
+
+const updateObjectMetadata = async (key, newProgress) => {
+  try {
+    const fileCommand = new HeadObjectCommand({
+      Bucket: "vidzspace",
+      Key: key,
+    });
+
+    const { Metadata } = await s3Client.send(fileCommand);
+
+    const newMetadata = {
+      ...Metadata,
+      progress: newProgress,
+    };
+
+    //console.log(Metadata);
+
+    const newCommand = new CopyObjectCommand({
+      Bucket: "vidzspace",
+      CopySource: `/vidzspace/${key}`,
+      Key: key,
+      Metadata: newMetadata,
+      MetadataDirective: "REPLACE",
+    });
+
+    await s3Client.send(newCommand);
+
+    //console.log(Metadata);
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export const renameFolderFile = async (req, res, next) => {
-  console.log(req);
+  //console.log(req);
   const { type, newName, teamPath, path, filefoldername } = req.body;
   const { userId } = req.query;
 
@@ -431,10 +496,13 @@ function getFilesForSubfolder(subfolderKey, objects) {
     if (item.Key.startsWith(subfolderKey)) {
       const relativePath = item.Key.slice(subfolderKey.length);
 
-      if (relativePath.endsWith("/") && relativePath.slice(0, -1).indexOf('/') === -1)
+      if (
+        relativePath.endsWith("/") &&
+        relativePath.slice(0, -1).indexOf("/") === -1
+      )
         subfolders.push({ Key: relativePath.slice(0, -1), Type: "folder" });
 
-     if (relativePath.indexOf("/") === -1 && relativePath !== "")
+      if (relativePath.indexOf("/") === -1 && relativePath !== "")
         subFiles.push(item); //is a file
     }
   });
@@ -656,13 +724,14 @@ export const listRoot = async (req, res, next) => {
   }
 };
 
-export const copyVideo = async (req, res) => { //destPath = path after 'users/'
+export const copyVideo = async (req, res) => {
+  //destPath = path after 'users/'
   console.log("hi");
   const { srcKey, destPath } = req.body;
 
   try {
     const owner_id = getOwnerIdFromObjectKey(srcKey);
-    console.log(owner_id)
+    console.log(owner_id);
     const ownerFirebaseData = await admin.auth().getUser(owner_id);
     const ownerEmail = ownerFirebaseData.toJSON().email;
 
@@ -670,15 +739,15 @@ export const copyVideo = async (req, res) => { //destPath = path after 'users/'
       sharing: "none",
       sharingType: "none",
       sharingWith: "[]",
-      ownerId : owner_id,
+      ownerId: owner_id,
       ownerEmail: ownerEmail,
-      progress: "upcoming"
-    }
+      progress: "upcoming",
+    };
 
     const command = new CopyObjectCommand({
-      "Bucket": "vidzspace",
-      "CopySource" : `/vidzspace/${srcKey}`,
-      "Key": `${prefix + destPath}/${srcKey.split("/").pop()}`,
+      Bucket: "vidzspace",
+      CopySource: `/vidzspace/${srcKey}`,
+      Key: `${prefix + destPath}/${srcKey.split("/").pop()}`,
       Metadata: newMetadata,
       MetadataDirective: "REPLACE",
     });
@@ -686,20 +755,18 @@ export const copyVideo = async (req, res) => { //destPath = path after 'users/'
 
     res.json({
       success: true,
-      newKey: `${prefix + destPath}/${srcKey.split("/").pop()}`
-    })
-
-  } catch(error){
+      newKey: `${prefix + destPath}/${srcKey.split("/").pop()}`,
+    });
+  } catch (error) {
     console.log(error);
   }
-}
+};
 
 export const generationUploadUrl = async (req, res, next) => {
   try {
-    const { filename, contentType, user_id, path } =
-      req.body;
+    const { filename, contentType, user_id, path } = req.body;
 
-    const fullPath = `users/${path}/${filename}`
+    const fullPath = `users/${path}/${filename}`;
     const owner_id = getOwnerIdFromObjectKey(fullPath); //for testing only
     const ownerFirebaseData = await admin.auth().getUser(owner_id);
     const ownerName = ownerFirebaseData.toJSON().displayName;

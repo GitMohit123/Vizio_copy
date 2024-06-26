@@ -80,6 +80,45 @@ export const deleteVideoFolder = async (folderKey, userId, teamPath, path) => {
   }
 };
 
+export const updateProgress = async (
+  type,
+  path,
+  teamPath,
+  userId,
+  filefoldername,
+  newProgress
+) => {
+  console.log(type, path, teamPath, userId, filefoldername, newProgress);
+  try {
+    const { data } = await axios.post(
+      `/vidzspaceApi/users/s3/updateprogress`,
+      {
+        type,
+        path,
+        newProgress,
+        teamPath,
+        filefoldername,
+      },
+
+      {
+        params: {
+          userId,
+        },
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log(data);
+
+    return data;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+};
+
 export const fileFolderRename = async (
   type,
   path,
@@ -228,7 +267,7 @@ export const getUploadPresignedUrl = async (
     const metaData = {
       sharing: "none",
       sharingType: "none",
-      sharingWith:[],
+      sharingWith: [],
       progress: "upcoming",
     };
     const response = await axios.post(
@@ -238,7 +277,7 @@ export const getUploadPresignedUrl = async (
         contentType,
         user_id,
         path,
-      },
+      }
       // {
       //   headers: {
       //     "Content-Type": "application/json",
@@ -251,7 +290,7 @@ export const getUploadPresignedUrl = async (
       //   withCredentials: true,
       // }
     );
-   return response.data; // Returning the response data
+    return response.data; // Returning the response data
   } catch (error) {
     console.error("Error:", error);
     throw error; // Re-throwing the error for handling elsewhere if needed
