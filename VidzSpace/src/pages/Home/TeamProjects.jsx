@@ -253,7 +253,7 @@ const TeamProjects = () => {
       )}
 
       <div className={`transition ${load ? "blur-content" : ""}`}>
-        {files.length === 0 && folders.length === 0 && !path ? (
+        {files?.length === 0 && folders?.length === 0 && !path ? (
           <div className="h-full w-full flex justify-center items-center">
             <motion.div
               onClick={() => dispatch(setProjectState(true))}
@@ -278,12 +278,13 @@ const TeamProjects = () => {
                     {folder?.innerFiles.length !== 0 ||
                     folder?.innerFolders.length !== 0 ? (
                       <div
+                        key={folder.Key}
                         className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 gap-4 h-40 overflow-y-auto no-scrollbar"
                         onClick={() => handleRoute(folder.Key)}
                       >
                         {folder?.innerFiles &&
                           folder?.innerFiles.map((file, index) => (
-                            <div className="rounded-lg" key={index}>
+                            <div className="rounded-lg" key={file?.SignedUrl}>
                               <video
                                 className="rounded-lg object-cover aspect-square w-full"
                                 key={index}

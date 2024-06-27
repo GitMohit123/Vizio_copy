@@ -35,7 +35,8 @@ const ProjectAdd = () => {
     user,
     selectedFilesWithUrls,
     setSelectedFilesWithUrls,
-    setLoad
+    setLoad,
+    setVideoPercentageUploaded
   } = useContext(HomeContext);
   const [openPicker, authResponse] = useDrivePicker();
   
@@ -58,6 +59,7 @@ const ProjectAdd = () => {
           (progressEvent.loaded * 100) / progressEvent.total
         );
         console.log(`Upload Progress: ${percentCompleted}%`);
+        setVideoPercentageUploaded(percentCompleted);
 
       },
     });
@@ -126,7 +128,7 @@ const ProjectAdd = () => {
     const folderFiles = foldersList.filter((file) =>
       file.type.startsWith("video/")
     );
-    setSelectedFiles((prevFiles) => [...prevFiles, ...videoFiles]);
+    setSelectedFiles((prevFiles) => [...prevFiles, ...videoFiles, ...folderFiles]);
     setSelectedFolders((prevFolders) => [...prevFolders, ...folderFiles]);
     setIsDragging(false);
   }, []);
@@ -138,23 +140,42 @@ const ProjectAdd = () => {
     setLoad(true);
     
       const ownerId = user?.uid; //for testing only
+      const user_id = user?.uid;
       // const response = await generate(`${ownerId}/${teamPath}/${path}`)
-      const files = selectedFiles.length > 0 ? [...selectedFiles, ...selectedFolders] : selectedFolders;
+      const files = selectedFiles;
+
+      // if(files.length === 0){ // if empty project
+      //   await getUploadPresignedUrl({fullPath: `${ownerId}/${teamPath}/${projectName}`})
+      // }
+
+      // create empty project first
+      await getUploadPresignedUrl({fullPath: `${ownerId}/${teamPath}/${projectName}`})
+
+      var folderName = "";
+      const createFoldersPromises = selectedFolders.map(async (folder) => {
+        var folderName1 = folder.path.split("/")[1];
+        console.log(folderName1)
+        if(folderName1 !== folderName){
+          folderName = folderName1;
+          await getUploadPresignedUrl({fullPath: `${ownerId}/${teamPath}/${projectName}/${folderName}`})
+        }
+      })
+      await Promise.all(createFoldersPromises);
 
       const uploadPromises = files.map(async (file) => {
         const id = Date.now();
-        const videoFileName = `video_${id}_${file.name}`;
+        const fileName = `video_${id}_${file.name}`;
         const contentType = file.type;
         const isInAFolder = file.path && file.path.includes("/");
         const fullPath = isInAFolder? `${ownerId}/${teamPath}/${projectName}/${file.path.slice(1, file.name.length * (-1) - 1)}` : `${ownerId}/${teamPath}/${projectName}`;
         // const fullPath = `${ownerId}/${teamPath}/${path}/${projectName}`; //if want nested projects
         try {
-          const result = await getUploadPresignedUrl(
-            videoFileName,
+          const result = await getUploadPresignedUrl({
+            fileName,
             contentType,
-            ownerId,
+            user_id,
             fullPath
-          );
+        });
           console.log(result.url);
           return { file, presignedUrl: result.url, isUploading: false };
         } catch (error) {
@@ -235,6 +256,9 @@ const ProjectAdd = () => {
       setLoad(false);
       setIsUploadingProgressOpen(false);
       setSelectedFilesWithUrls([]);
+      setSelectedFiles([]);
+      setSelectedFolders([]);
+      setVideoPercentageUploaded(0);
       // setRefresh((prev) => !prev);
       
     };
@@ -245,8 +269,8 @@ const ProjectAdd = () => {
       setIsUploadingProgressOpen(true);
     }
     else setIsUploadingProgressOpen(false);
-    console.log(selectedFiles, selectedFolders)
-  }, [selectedFiles, selectedFolders]);
+    console.log(selectedFiles, selectedFolders, selectedFilesWithUrls)
+  }, [selectedFiles, selectedFolders, selectedFilesWithUrls]);
   
 
   const {

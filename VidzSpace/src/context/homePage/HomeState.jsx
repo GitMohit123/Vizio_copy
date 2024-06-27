@@ -67,7 +67,7 @@ const HomeState = ({ children }) => {
   const [isUploadingProgressOpen, setIsUploadingProgressOpen] = useState(false);
   const [isUploadingFiles, setIsUploadingFiles] = useState(false);
   const [selectedFilesWithUrls, setSelectedFilesWithUrls] = useState([]);
-
+  const [videoPercentageUploaded, setVideoPercentageUploaded] = useState(0);
   const [selectedProgressItem, setSelectedProgressItem] = useState({});
 
   return (
@@ -123,6 +123,8 @@ const HomeState = ({ children }) => {
         setIsUploadingFiles,
         selectedFilesWithUrls,
         setSelectedFilesWithUrls,
+        videoPercentageUploaded,
+        setVideoPercentageUploaded,
       }}
     >
       {children}

@@ -602,6 +602,7 @@ export const listRoot = async (req, res, next) => {
     };
     const data2 = await s3Client.send(new ListObjectsV2Command(params2));
     const size = await getFolderSize("vidzspace", prefix + path, data2);
+    // res.json(data2)
 
     // const owner_id = getOwnerIdFromObjectKey(prefix + path);
     // var sharingDetails;
@@ -764,9 +765,22 @@ export const copyVideo = async (req, res) => {
 
 export const generationUploadUrl = async (req, res, next) => {
   try {
-    const { filename, contentType, user_id, path } = req.body;
+    const { fileName, contentType, user_id, path } = req.body;
 
-    const fullPath = `users/${path}/${filename}`;
+    if(!fileName){ //empty folder
+      console.log(path)
+      const command = new PutObjectCommand({
+        Bucket: "vidzspace",
+        Key: `users/${path}/`,
+      });
+      const response = await s3Client.send(command);
+      return res.status(201).json({
+        success: true,
+        response,
+      });
+    }
+
+    const fullPath = `users/${path}/${fileName}`;
     const owner_id = getOwnerIdFromObjectKey(fullPath); //for testing only
     const ownerFirebaseData = await admin.auth().getUser(owner_id);
     const ownerName = ownerFirebaseData.toJSON().displayName;
