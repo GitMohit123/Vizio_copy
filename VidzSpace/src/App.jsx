@@ -9,6 +9,7 @@ import { getAuth } from "firebase/auth";
 import { validateUserJWTToken } from "./api/auth";
 import MainLoader from "./components/MainLoader";
 import HomeState from "./context/homePage/HomeState";
+import CommentPage from "./pages/Home/CommentPage";
 
 const App = () => {
   const loading = useSelector((state) => state.user.loading);
@@ -45,6 +46,7 @@ const App = () => {
         <HomeState>
           <Routes>
             <Route path="/*" element={<LandingPage />} />
+            <Route path="/feedback" element={<CommentPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
             <Route path="/home" element={<HomePage />} />

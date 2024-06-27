@@ -135,8 +135,8 @@ const TeamProjects = () => {
 
   const navigate = useNavigate();
 
-  const handleDoubleClick = () => {
-    navigate("/feedback"); // Navigate to the feedback page
+  const handleDoubleClick = (file) => {
+    navigate("/feedback", { state: { file: file } }); // Navigate to the feedback page
   };
 
   const handleDelete = (url) => {
@@ -270,7 +270,6 @@ const TeamProjects = () => {
                 <div
                   key={index}
                   className="p-4 bg-[#35353a] rounded-lg text-white relative cursor-pointer"
-                  onDoubleClick={handleDoubleClick}
                 >
                   <ProgressBar doc={folder} />
 
@@ -404,7 +403,10 @@ const TeamProjects = () => {
                 <div
                   key={index}
                   className="p-4 bg-[#35353a] rounded-lg text-white relative cursor-pointer"
-                  onDoubleClick={handleDoubleClick}
+                  onDoubleClick={() => {
+                    console.log("double");
+                    handleDoubleClick(file);
+                  }}
                 >
                   <div className="flex flex-col h-full w-full gap-2">
                     <ProgressBar doc={file} />
