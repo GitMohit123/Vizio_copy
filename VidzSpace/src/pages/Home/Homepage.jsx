@@ -3,7 +3,7 @@ import { FaArrowRightLong } from "react-icons/fa6";
 import { teamProjectsInfoList } from "../../constants/homePage";
 import { motion } from "framer-motion";
 import { useDispatch, useSelector } from "react-redux";
-import { createTeam, fetchTeamsData, listTeams } from "../../api/s3Objects";
+import { copyObject, createTeam, fetchTeamsData, listTeams } from "../../api/s3Objects";
 import { CgProfile } from "react-icons/cg";
 import { FiLogOut } from "react-icons/fi";
 import {
@@ -52,7 +52,12 @@ const Homepage = () => {
     setDeleteLoader,
     loader,
     isUploadingProgressOpen,
-    load
+    load,
+    isPastingObject,
+    setIsPastingObject,
+    copiedObject,
+    setCopiedObject,
+    setLoad,
   } = useContext(HomeContext);
 
   const { handleSignOut } = useContext(FirebaseContext);
@@ -125,6 +130,7 @@ const Homepage = () => {
     dispatch(setOptionState(optionName));
   };
 
+
   return (
     <div className="h-screen w-screen bg-[#1B1B1B] flex flex-row">
       {/* Section1 */}
@@ -160,7 +166,7 @@ const Homepage = () => {
       </div>
 
       {/* Section 2 */}
-      <div className="team-projects-info flex bg-[#242426] h-full w-1/6 p-2 rounded-lg flex-col gap-4 relative">
+      <div className={`team-projects-info flex bg-[#242426] h-full w-1/6 p-2 rounded-lg flex-col gap-4 relative ${isPastingObject? 'hidden': ''}`}>
         <motion.div
           onClick={handleDropDownClick}
           className="bg-[#2f2f2f] flex w-full h-fit p-2 rounded-lg justify-center items-center text-[#f8ff2a] cursor-pointer "
@@ -196,7 +202,7 @@ const Homepage = () => {
             </div>
           </motion.div>
         )}
-        <div className="bg-[#8b8d90] flex w-full h-full p-3 rounded-lg text-[#f8ff2a] flex-col gap-2">
+        <div className={`bg-[#8b8d90] flex w-full h-full p-3 rounded-lg text-[#f8ff2a] flex-col gap-2`}>
           {/* New Project Section */}
           <motion.div
             whileHover={{ scale: 1.03 }}
@@ -247,7 +253,9 @@ const Homepage = () => {
           <div className="flex flex-row gap-4 justify-center items-center cursor-pointer ">
             <div className="flex flex-row gap-4 justify-center items-center cursor-pointer">
               <img src="/icons/Share.png" alt="Share" className="h-6 w-10" />
-              <p className="text-[#f8ff2a]">Share</p>
+              <p className="text-[#f8ff2a]">
+                Share
+              </p>
             </div>
             <div className="bg-[#1B1B1B] text-[#f8ff2a] p-2 rounded-full h-7 w-7 flex justify-center items-center hover:bg-[#242426]">
               ?
@@ -256,7 +264,7 @@ const Homepage = () => {
         </div>
 
         {/* Projects */}
-        <div className="relative flex flex-col w-full h-full bg-[#242426] rounded-lg p-5 overflow-y-auto">
+        <div className={`relative flex flex-col w-full h-full bg-[#242426] rounded-lg p-5 overflow-y-auto`}>
           {projectState && <ProjectAdd />}
           {isUploadingProgressOpen && <UploadingProgress />}
           {teamState && <TeamAdd />}

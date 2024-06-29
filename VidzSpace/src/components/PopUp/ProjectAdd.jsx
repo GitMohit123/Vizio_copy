@@ -144,9 +144,7 @@ const ProjectAdd = () => {
       // const response = await generate(`${ownerId}/${teamPath}/${path}`)
       const files = selectedFiles;
 
-      // if(files.length === 0){ // if empty project
-      //   await getUploadPresignedUrl({fullPath: `${ownerId}/${teamPath}/${projectName}`})
-      // }
+      
 
       // create empty project first
       await getUploadPresignedUrl({fullPath: `${ownerId}/${teamPath}/${projectName}`})

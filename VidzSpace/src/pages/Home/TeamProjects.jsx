@@ -14,7 +14,7 @@ import {
   setPathEmpty,
   setProjectState,
 } from "../../app/Actions/cmsAction";
-import { download } from "../../api/s3Objects";
+import { copyObject, download } from "../../api/s3Objects";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { ImFilesEmpty } from "react-icons/im";
 import ProgressBar from "../../components/Project/ProgressBar";
@@ -25,7 +25,7 @@ import { deleteVideo, deleteVideoFolder } from "../../api/s3Objects";
 import FolderRename from "../../components/PopUp/FolderRename";
 import { fetchTeamsData } from "../../api/s3Objects";
 const TeamProjects = () => {
-  const { teamPath, files, folders, path, load, setLoad } =
+  const { teamPath, files, folders, path, load, setLoad, isPastingObject, setIsPastingObject, setCopiedObject, copiedObject } =
     useContext(HomeContext);
 
   console.log("path", path);
@@ -91,6 +91,26 @@ const TeamProjects = () => {
     e.target.pause();
     e.target.currentTime = 0;
   };
+
+  const handlePasteObject = async () => {
+    setLoad(true);
+    setIsPastingObject(false);
+    const ownerId = user?.uid; //for testing only
+    console.log("pasting object at: ", ownerId+"/"+teamPath+"/"+path );
+    try {
+      const response = await copyObject({
+        srcKey: copiedObject?.key,
+        destPath: `${ownerId}/${teamPath}/${path}`,
+        type: copiedObject?.type,
+        user_id: user?.uid
+      })
+      console.log(response);
+      setLoad(false);
+      setCopiedObject({});
+    } catch (error) {
+      console.log("error during pasting: ", error)
+    }
+  }
 
   const [selectedItem, setSelectedItem] = useState({});
 
@@ -206,10 +226,18 @@ const TeamProjects = () => {
       });
   };
 
+  const handleCopy = ({name, type}) => {
+    const ownerId = user?.uid; //for testing only
+    const fullSrcKey = ownerId + '/' + teamPath + '/' + (path? path + '/' : '') + name;
+    console.log("fullsrcpath: ", fullSrcKey);
+    setCopiedObject({key: fullSrcKey, type: type});
+    setIsPastingObject(true);
+  }
+
   return (
     <>
-      <div className="flex flex-row w-full p-2 justify-between items-center">
-        <div className="flex flex-row gap-3 items-center  justify-center text-[#9B9DA0]">
+      <div className={`flex flex-row w-full p-2 justify-between items-center`}>
+        <div className={`flex flex-row gap-3 items-center  justify-center text-[#9B9DA0] `}>
           <FaPhotoVideo />
           <p
             className="text-[#f8ff2a] cursor-pointer"
@@ -232,8 +260,16 @@ const TeamProjects = () => {
             </div>
           ))}
         </div>
+        {isPastingObject ?
+            <div className="bg-[#f8ff2a] text-black rounded-md py-2 px-4 z-20 cursor-pointer"
+              onClick={() => handlePasteObject()}>
+              Paste
+            </div> : ''
+          }
+        
       </div>
 
+     
       {/* {loading ? (
         <>
           <PreviewLoader />
@@ -264,7 +300,7 @@ const TeamProjects = () => {
             </motion.div>
           </div>
         ) : (
-          <div className="h-full w-full p-4">
+          <div className={`h-full w-full p-4  ${isPastingObject? 'filter brightness-75': ''}`}>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
               {folders?.map((folder, index) => (
                 <div
@@ -368,7 +404,8 @@ const TeamProjects = () => {
                           <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
                             Click for Review
                           </p>
-                          <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
+                          <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1"
+                            onClick={() => handleCopy({ name: folder?.Key, type: "folder"})}>
                             Copy
                           </p>
                           <p
@@ -476,7 +513,8 @@ const TeamProjects = () => {
                           <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
                             Click for Review
                           </p>
-                          <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1">
+                          <p className="text-white hover:bg-slate-800 py-1 rounded-xl px-1"
+                            onClick={() => handleCopy({ name: file?.Key, type: "file"})}>
                             Copy
                           </p>
                           <p

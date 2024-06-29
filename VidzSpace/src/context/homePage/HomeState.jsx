@@ -69,6 +69,8 @@ const HomeState = ({ children }) => {
   const [selectedFilesWithUrls, setSelectedFilesWithUrls] = useState([]);
   const [videoPercentageUploaded, setVideoPercentageUploaded] = useState(0);
   const [selectedProgressItem, setSelectedProgressItem] = useState({});
+  const [isPastingObject, setIsPastingObject] = useState(false);
+  const [copiedObject, setCopiedObject] = useState({});
 
   return (
     <HomeContext.Provider
@@ -125,6 +127,10 @@ const HomeState = ({ children }) => {
         setSelectedFilesWithUrls,
         videoPercentageUploaded,
         setVideoPercentageUploaded,
+        isPastingObject,
+        setIsPastingObject,
+        copiedObject,
+        setCopiedObject,
       }}
     >
       {children}

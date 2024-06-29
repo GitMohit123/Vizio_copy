@@ -725,13 +725,46 @@ export const listRoot = async (req, res, next) => {
   }
 };
 
-export const copyVideo = async (req, res) => {
+async function copyFolder({ fromBucket, fromLocation, toBucket = fromBucket, toLocation }) {
+  let count = 0;
+  const recursiveCopy = async function(token) {
+    const listCommand = new ListObjectsV2Command({
+      Bucket: fromBucket,
+      Prefix: fromLocation,
+      ContinuationToken: token
+    });
+    let list = await s3Client.send(listCommand); // get the list
+    if (list.KeyCount) { // if items to copy
+      const fromObjectKeys = list.Contents.map(content => content.Key); // get the existing object keys
+      for (let fromObjectKey of fromObjectKeys) { // loop through items and copy each one
+        const toObjectKey = fromObjectKey.replace(fromLocation, toLocation); // replace with the destination in the key
+        // copy the file
+        const copyCommand = new CopyObjectCommand({
+          // ACL: 'public-read',
+          Bucket: toBucket,
+          CopySource: `${fromBucket}/${fromObjectKey}`,
+          Key: toObjectKey
+        });
+        await s3Client.send(copyCommand);
+        count += 1;
+      }
+    }
+    if (list.NextContinuationToken) {
+      recursiveCopy(list.NextContinuationToken);
+    }
+    return `${count} files copied.`;
+  };
+  return recursiveCopy();
+};
+
+export const copyObject = async (req, res) => {
   //destPath = path after 'users/'
   console.log("hi");
-  const { srcKey, destPath } = req.body;
+  const { srcKey, destPath, type } = req.body;
 
   try {
-    const owner_id = getOwnerIdFromObjectKey(srcKey);
+    const sourceKey = prefix + srcKey;
+    const owner_id = getOwnerIdFromObjectKey(sourceKey);
     console.log(owner_id);
     const ownerFirebaseData = await admin.auth().getUser(owner_id);
     const ownerEmail = ownerFirebaseData.toJSON().email;
@@ -745,10 +778,30 @@ export const copyVideo = async (req, res) => {
       progress: "upcoming",
     };
 
+    if (type === "folder") {
+      // const folderName = srcKey.split('/').pop();
+      // const emptyFolderResponse = await generationUploadUrl({path: destPath+'/'+folderName, user_id: owner_id});
+
+      const newDestPath = destPath + "/" + srcKey.split("/").pop();
+      const emptyFolderResponse = await createEmptyFolder(
+        newDestPath,
+      )
+      if(emptyFolderResponse) console.log("Folder created");
+
+      const response = await copyFolder({
+        fromBucket: "vidzspace",
+        fromLocation: sourceKey,
+        toBucket: "vidzspace",
+        toLocation: `${prefix + newDestPath}`
+      });
+
+      return res.json({ success: true, response });
+    }
+
     const command = new CopyObjectCommand({
       Bucket: "vidzspace",
-      CopySource: `/vidzspace/${srcKey}`,
-      Key: `${prefix + destPath}/${srcKey.split("/").pop()}`,
+      CopySource: `/vidzspace/${sourceKey}`,
+      Key: `${prefix + destPath}/${sourceKey.split("/").pop()}`,
       Metadata: newMetadata,
       MetadataDirective: "REPLACE",
     });
@@ -756,12 +809,21 @@ export const copyVideo = async (req, res) => {
 
     res.json({
       success: true,
-      newKey: `${prefix + destPath}/${srcKey.split("/").pop()}`,
+      newKey: `${prefix + destPath}/${sourceKey.split("/").pop()}`,
     });
   } catch (error) {
     console.log(error);
   }
 };
+
+const createEmptyFolder = async (path, user_id) => {
+  const command = new PutObjectCommand({
+    Bucket: "vidzspace",
+    Key: `users/${path}/`,
+  });
+  const response = await s3Client.send(command);
+  return response;
+}
 
 export const generationUploadUrl = async (req, res, next) => {
   try {
@@ -769,11 +831,7 @@ export const generationUploadUrl = async (req, res, next) => {
 
     if(!fileName){ //empty folder
       console.log(path)
-      const command = new PutObjectCommand({
-        Bucket: "vidzspace",
-        Key: `users/${path}/`,
-      });
-      const response = await s3Client.send(command);
+      const response = await createEmptyFolder(path);
       return res.status(201).json({
         success: true,
         response,

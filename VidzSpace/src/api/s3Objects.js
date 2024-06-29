@@ -265,12 +265,6 @@ export const getUploadPresignedUrl = async ({
   try {
     const path = fullPath || "";
     console.log("in api: ", fileName, contentType, user_id, path);
-    const metaData = {
-      sharing: "none",
-      sharingType: "none",
-      sharingWith: [],
-      progress: "upcoming",
-    };
     const response = await axios.post(
       `/vidzspaceApi/users/s3/generateUploadUrl`,
       {
@@ -298,22 +292,17 @@ export const getUploadPresignedUrl = async ({
   }
 };
 
-// export const uploadToPresignedUrl1 = async (
-//   presignedUrl,
-//   file,
-// ) => {
-//   console.log("in apii: ", presignedUrl, file);
-//   // Upload file to pre-signed URL
-//   const uploadResponse = await axios.put(presignedUrl, file, {
-//     headers: {
-//       "Content-Type": "video/mp4",
-//     },
-//     onUploadProgress: (progressEvent) => {
-//       const percentCompleted = Math.round(
-//         (progressEvent.loaded * 100) / progressEvent.total
-//       );
-//       console.log(`Upload Progress: ${percentCompleted}%`);
-//     },
-//   });
-//   return uploadResponse.status;
-// };
+export const copyObject = async ({srcKey, destPath, type, user_id}) => {
+  try {
+    const response = await axios.post(`/vidzspaceApi/users/s3/copyObject`, {
+        requester_id: user_id,
+        srcKey,
+        destPath,
+        type,
+    });
+    console.log(response.data);
+    return response.data;
+  } catch (err) {
+    console.log(err);
+  }
+};
