@@ -764,17 +764,18 @@ export const copyObject = async (req, res) => {
 
   try {
     const sourceKey = prefix + srcKey;
+    const destinationPath =destPath.endsWith("/") ? destPath.slice(0, -1) : destPath;
     const owner_id = getOwnerIdFromObjectKey(sourceKey);
     console.log(owner_id);
     const ownerFirebaseData = await admin.auth().getUser(owner_id);
-    const ownerEmail = ownerFirebaseData.toJSON().email;
+    const ownerName = ownerFirebaseData.toJSON().displayName;
 
     const newMetadata = {
       sharing: "none",
       sharingType: "none",
       sharingWith: "[]",
       ownerId: owner_id,
-      ownerEmail: ownerEmail,
+      ownerName: ownerName,
       progress: "upcoming",
     };
 
@@ -782,7 +783,7 @@ export const copyObject = async (req, res) => {
       // const folderName = srcKey.split('/').pop();
       // const emptyFolderResponse = await generationUploadUrl({path: destPath+'/'+folderName, user_id: owner_id});
 
-      const newDestPath = destPath + "/" + srcKey.split("/").pop();
+      const newDestPath = destinationPath + "/" + srcKey.split("/").pop();
       const emptyFolderResponse = await createEmptyFolder(
         newDestPath,
       )
@@ -801,7 +802,7 @@ export const copyObject = async (req, res) => {
     const command = new CopyObjectCommand({
       Bucket: "vidzspace",
       CopySource: `/vidzspace/${sourceKey}`,
-      Key: `${prefix + destPath}/${sourceKey.split("/").pop()}`,
+      Key: `${prefix + destinationPath}/${sourceKey.split("/").pop()}`,
       Metadata: newMetadata,
       MetadataDirective: "REPLACE",
     });
@@ -809,7 +810,7 @@ export const copyObject = async (req, res) => {
 
     res.json({
       success: true,
-      newKey: `${prefix + destPath}/${sourceKey.split("/").pop()}`,
+      newKey: `${prefix + destinationPath}/${sourceKey.split("/").pop()}`,
     });
   } catch (error) {
     console.log(error);
